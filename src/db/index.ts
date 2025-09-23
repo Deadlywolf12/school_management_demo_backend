@@ -4,6 +4,6 @@ import * as dotenv from "dotenv";
 
 dotenv.config({ path: "../.env" });
 
-const pool = new Pool({connectionString: process.env.DATABASE_URL_docker!,});
+const pool = new Pool({connectionString: process.env.DATABASE_URL_DOCKER!,});
 
 export const db = drizzle(pool);

@@ -15,7 +15,7 @@ interface SignupBody{
 
 
 authRouter.get("/",(req,res)=>{
-    res.send("this is authRoute ")
+    res.send("this is authRoute")
 
 
 });
@@ -24,7 +24,7 @@ authRouter.post("/signup",async (req: Request<{},{},SignupBody>,res: Response)=>
 
 try {
 //getting body from req
-   const {name,email,password}= req.body;
+   const {email,password}= req.body;
 
    // checking if user already exist or not
 
@@ -41,7 +41,7 @@ try {
 
    const hashedPassword = await bcrypt.hash(password,8);
    const newUser: NewUser = {
-    name,
+ 
     email,
     password: hashedPassword,
 
