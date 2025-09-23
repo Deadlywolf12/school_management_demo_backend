@@ -4,13 +4,15 @@ services:
     build:
       context: ./
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT}:8000"       
+    env_file:
+      - .env
     environment:
-      - PORT=8000
-      - DATABASE_URL=postgresql://postgres:test123@db:5432/mydb
+      - PORT=${BACKEND_PORT}
+      - DATABASE_URL=${DATABASE_URL_DOCKER}
     depends_on:
       - db
-    volumes: 
+    volumes:
       - ./:/app
       - /app/node_modules
 
@@ -19,8 +21,8 @@ services:
     container_name: postgres_container
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: test123
-      POSTGRES_DB: mydb
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
