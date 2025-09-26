@@ -1,0 +1,1 @@
+ALTER TABLE "otps" ADD COLUMN "requestedAt" timestamp DEFAULT now() NOT NULL;

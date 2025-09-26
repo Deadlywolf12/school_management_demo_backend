@@ -9,7 +9,7 @@ export default defineConfig({
   dialect: "postgresql",
   dbCredentials: {
     url: process.env.DATABASE_URL!,
-    ssl:false, //need to make it true after making it live
+    ssl:false, 
   },
 
 });
