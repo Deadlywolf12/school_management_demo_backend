@@ -28,4 +28,9 @@ export const resendOtpSchema = z.object({
   email: emailSchema,
 });
 
-
+// forgotPass
+export const changePasswordSchema = z.object({
+  userId: z.string().transform(p=>p.trim()),
+  oldPassword: z.string().min(6, "Password required").transform(p => p.trim()),
+  newPassword:z.string().min(6, "Password required").transform(p => p.trim()),
+});

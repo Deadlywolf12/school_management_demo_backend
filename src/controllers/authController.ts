@@ -22,6 +22,12 @@ interface SigninBody {
   password: string;
 }
 
+interface forgetPasswordBody{
+  userId: string;
+  oldPassword:string;
+  newPassword:string;
+}
+
 const getJwtSecret = (): Secret => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET not configured");
@@ -31,6 +37,55 @@ const getJwtSecret = (): Secret => {
 
 
 // Controllers
+
+
+
+
+
+
+
+export const changePassword = async (
+  req: Request<{}, {}, forgetPasswordBody>,
+  res: Response
+) => {
+  try {
+    const { userId, oldPassword, newPassword } = req.body;
+
+
+    const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
+
+    if (!existingUser) {
+      return res.status(400).json({ success: false, msg: "User not found" });
+    }
+
+   
+    const isOldPassValid = await bcrypt.compare(oldPassword, existingUser.password);
+    if (!isOldPassValid) {
+      return res.status(400).json({ success: false, msg: "Incorrect old password" });
+    }
+
+    // 3. Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 8);
+
+    // 4. Update in DB
+    const result = await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId)).returning();
+
+    if (result.length === 0) {
+      return res.status(400).json({ success: false, msg: "Failed to update password" });
+    }
+
+    // 5. Success
+    res.status(200).json({ success: true, msg: "Password updated successfully" });
+  } catch (err) {
+    console.error("forgetPassword error:", err);
+    res.status(500).json({ success: false, msg: "Internal server error" });
+  }
+};
+
+
 
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
