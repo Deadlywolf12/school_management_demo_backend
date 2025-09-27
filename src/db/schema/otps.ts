@@ -7,6 +7,7 @@ export const otps = pgTable("otps", {
   expiresAt: timestamp("expiresAt").notNull(),
   createdAt: timestamp("createdAt").defaultNow(),
    requestedAt: timestamp("requestedAt").defaultNow().notNull(),
+   purpose: text("purpose").notNull().default("signup"),
 });
 
 export type Otp = typeof otps.$inferSelect;

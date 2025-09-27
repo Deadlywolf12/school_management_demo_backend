@@ -4,23 +4,28 @@ dotenv.config();
 
 export async function sendOtpEmail(to: string, otp: string, expiresInMinutes: number) {
   const transporter = nodemailer.createTransport({
-    service: "gmail", 
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      pass: process.env.EMAIL_PASS, 
     },
   });
 
- 
   const { subject, text, html } = generateOtpEmailTemplate(to, otp, expiresInMinutes);
 
-  await transporter.sendMail({
-    from: `"KhataBook" <${process.env.EMAIL_USER}>`,
-    to,
-    subject,
-    text,
-    html,
-  });
+  try {
+    await transporter.sendMail({
+      from: `"KhataBook" <${process.env.EMAIL_USER}>`,
+      to,
+      subject,
+      text,
+      html,
+    });
+    console.log(`✅ OTP email sent to ${to}`);
+  } catch (err) {
+    console.error("❌ Error sending OTP email:", err);
+    throw err;
+  }
 }
 
 export function generateOtpEmailTemplate(email: string, otp: string, expiresInMinutes: number) {
@@ -38,7 +43,7 @@ This OTP will expire in ${expiresInMinutes} minutes.
 We’re sending this to your email: ${email}
 If you did not request this, please ignore the message.
 
-Thanks,  
+Thanks,
 The Team`,
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.5;">

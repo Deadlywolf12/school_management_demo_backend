@@ -1,0 +1,1 @@
+ALTER TABLE "otps" ADD COLUMN "purpose" text DEFAULT 'signup' NOT NULL;

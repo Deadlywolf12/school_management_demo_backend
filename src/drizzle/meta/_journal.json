@@ -36,6 +36,13 @@
       "when": 1758904217193,
       "tag": "0004_salty_zarek",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1758997052115,
+      "tag": "0005_serious_sentinels",
+      "breakpoints": true
     }
   ]
 }

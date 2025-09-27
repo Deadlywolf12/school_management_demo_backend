@@ -7,19 +7,28 @@ import { checkOtpCoolDown } from "./otpCoolDown";
 import { generateOtp } from "./generateOtp";
 import { sendOtpEmail } from "./sendEmail";
 
+
 export async function handleOtpRequest(
   email: string,
-  { forResend }: { forResend: boolean }
+  { forResend, purpose }: { forResend: boolean; purpose: "signup" | "forgotPassword" }
 ): Promise<{ success: boolean; msg: string }> {
   const emailNormalized = email.trim().toLowerCase();
 
-  // check if user already exists
-  const existingUser = await db.select().from(users).where(eq(users.email, emailNormalized));
-  if (existingUser.length > 0) {
-    return { success: false, msg: "Email already registered" };
+  if (purpose === "signup") {
+   
+    const existingUser = await db.select().from(users).where(eq(users.email, emailNormalized));
+    if (existingUser.length > 0) {
+      return { success: false, msg: "Email already registered" };
+    }
+  } else if (purpose === "forgotPassword") {
+  
+    const existingUser = await db.select().from(users).where(eq(users.email, emailNormalized));
+    if (existingUser.length === 0) {
+      return { success: false, msg: "Email not found" };
+    }
   }
 
-  // cooldown check
+
   const cooldownRemaining = await checkOtpCoolDown(emailNormalized, 60);
   if (cooldownRemaining) {
     return {
@@ -28,21 +37,24 @@ export async function handleOtpRequest(
     };
   }
 
-  // cleanup old OTP
+ 
   await db.delete(otps).where(eq(otps.email, emailNormalized));
 
-  // generate new OTP
+ 
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-  const newOtp: NewOtp = { email: emailNormalized, otp, expiresAt };
+  const newOtp: NewOtp = { email: emailNormalized, otp, expiresAt, purpose };
   await db.insert(otps).values(newOtp);
 
-  // send email
+ 
   await sendOtpEmail(emailNormalized, otp, 15);
 
-  return {
+  return { 
     success: true,
-    msg: forResend ? "A new OTP has been sent to your email" : "OTP sent to your email",
+    msg: forResend
+      ? `A new OTP for ${purpose} has been sent to your email`
+      : `OTP for ${purpose} sent to your email`,
   };
 }
+

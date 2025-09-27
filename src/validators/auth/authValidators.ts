@@ -28,9 +28,30 @@ export const resendOtpSchema = z.object({
   email: emailSchema,
 });
 
-// forgotPass
+// changepassword
 export const changePasswordSchema = z.object({
-  userId: z.string().transform(p=>p.trim()),
+ 
   oldPassword: z.string().min(6, "Password required").transform(p => p.trim()),
   newPassword:z.string().min(6, "Password required").transform(p => p.trim()),
 });
+
+// forgotPass
+export const forgotPasswordSchema = z.object({
+  email: emailSchema,
+  newPassword:z.string().min(6, "Password required").transform(p => p.trim()),
+   otp: z.string().length(6, "OTP must be 6 digits"),
+});
+// forgotPass
+export const updateNameSchema = z.object({
+  name:z.string().min(2, "Name must be at least 2 characters").transform(p => p.trim()),
+});
+export const updateAvatarSchema = z.object({
+  avatar:z.string().min(2, "Avatar should be more than 2 chr").transform(p => p.trim()),
+});
+
+export const changeEmailSchema = z.object({
+  password: z.string().min(6, "Password required"),
+  newEmail: emailSchema,
+  otp: z.string().length(6, "OTP must be 6 digits"),
+});
+
