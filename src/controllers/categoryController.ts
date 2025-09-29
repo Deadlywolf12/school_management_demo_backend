@@ -4,16 +4,8 @@ import { db } from "../db";
 import { categories } from "../db/schema/category";
 import { AuthRequest } from "../middleware/auth";
 import { Request, Response } from "express";
-import { Timestamp } from "mongodb";
 
-export interface CreateCatBody {
-  catId: string; 
-  catName: string; 
-  catType: "income" | "expense"; 
-  createdAt: string; 
-  updatedAt: string;
-  isDeleted?: boolean; 
-}
+
 
 
 export const getCategoryList = async (req:AuthRequest,res:Response)=>{
@@ -22,7 +14,7 @@ export const getCategoryList = async (req:AuthRequest,res:Response)=>{
         
         if(!req.user) return res.status(401).json({success:false,msg:"Unauthorized"});
 
-        const userCategories = await db.select().from(categories).where(eq(categories.id,req.user.id));
+        const userCategories = await db.select().from(categories).where(eq(categories.userId,req.user.id));
         return res.json({ success: true, categories: userCategories });
 
 
@@ -33,4 +25,49 @@ export const getCategoryList = async (req:AuthRequest,res:Response)=>{
     }
 }
 
-export const createCategory = async (req)
+
+export const syncCategories = async (req: AuthRequest, res: Response) => {
+  try {
+ 
+
+    const { categories: incomingCategories } = req.body;
+    const userId = req.user!.id;
+
+    for (const cat of incomingCategories) {
+      if (cat.isDeleted) {
+       
+        await db.delete(categories).where(eq(categories.id, cat.catId));
+        continue;
+      }
+
+    
+      const updated = await db
+        .update(categories)
+        .set({
+          name: cat.catName,
+          type: cat.catType,
+        
+           updatedAt: new Date(),
+        })
+        .where(eq(categories.id, cat.catId))
+        .returning();
+
+      if (updated.length === 0) {
+    
+        await db.insert(categories).values({
+          id: cat.catId,
+          userId,
+          name: cat.catName,
+          type: cat.catType,
+          createdAt: new Date(cat.createdAt),
+           updatedAt: new Date(),
+        });
+      }
+    }
+
+    return res.json({ success: true, msg: "Categories synced successfully" });
+  } catch (err) {
+    console.error("syncCategories error:", err);
+    return res.status(500).json({ success: false, msg: "Internal server error" });
+  }
+};

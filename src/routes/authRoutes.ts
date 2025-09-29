@@ -3,7 +3,7 @@ import { Router } from "express";
 import { auth } from "../middleware/auth";
 import { getProfile, reqOtp, signin, signup, resendOtp, changePassword as changePassword, forgotPassword, changeEmail } from "../controllers/authController";
 import { validate } from "../middleware/validate";
-import {changeEmailSchema, changePasswordSchema, forgotPasswordSchema, requestOtpSchema, resendOtpSchema, loginSchema as signinSchema, signupSchema } from "../validators/auth/authValidators";
+import {changeEmailSchema, changePasswordSchema, forgotPasswordSchema, requestOtpSchema, resendOtpSchema, loginSchema as signinSchema, signupSchema } from "../validators/authValidators";
 
 
 const authRouter = Router();
