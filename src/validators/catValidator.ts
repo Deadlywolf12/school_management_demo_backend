@@ -3,11 +3,11 @@ import { z } from "zod";
 export const categorySyncSchema = z.object({
   categories: z.array(
     z.object({
-      catId: z.string().uuid({ message: "Invalid UUID" }),
+      catId: z.string().uuid("Invalid UUID"),
       catName: z.string().min(2,"Category name must be at least 2 characters"),
       catType: z.enum(["income", "expense"]),
-      createdAt: z.string().datetime("Invalid date format"),
-      updatedAt: z.string().datetime("Invalid date format"),
+      createdAt:z.coerce.date(),
+      updatedAt:z.coerce.date(),
       isDeleted: z.boolean().optional().default(false),
     })
   ),
