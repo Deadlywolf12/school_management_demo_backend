@@ -1,9 +1,9 @@
 // routes/auth/authRoutes.ts
 import { Router } from "express";
 import { auth } from "../middleware/auth";
-import { getProfile, reqOtp, signin, signup, resendOtp, changePassword as changePassword, forgotPassword, changeEmail } from "../controllers/authController";
+import { getProfile, reqOtp, signin, signup, resendOtp, changePassword, changeName, forgotPassword, changeEmail, changeAvatar } from "../controllers/authController";
 import { validate } from "../middleware/validate";
-import {changeEmailSchema, changePasswordSchema, forgotPasswordSchema, requestOtpSchema, resendOtpSchema, loginSchema as signinSchema, signupSchema } from "../validators/authValidators";
+import {changeAvatarSchema, changeEmailSchema, changeNameSchema, changePasswordSchema, forgotPasswordSchema, requestOtpSchema, resendOtpSchema, loginSchema as signinSchema, signupSchema } from "../validators/authValidators";
 
 
 const authRouter = Router();
@@ -38,6 +38,10 @@ authRouter.post("/change-email/request-otp",auth, validate(requestOtpSchema),  (
   reqOtp(req, res, "changeEmail"));
 authRouter.post("/change-email/resend-otp",auth,validate(resendOtpSchema), (req, res) =>
   resendOtp(req, res, "changeEmail"));
+// change name
+authRouter.put("/change-name",auth,validate(changeNameSchema),changeName);
+// change avatar
+authRouter.put("/change-avatar",auth,validate(changeAvatarSchema),changeAvatar);
 
 
 export default authRouter;

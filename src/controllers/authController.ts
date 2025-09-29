@@ -329,3 +329,72 @@ export const changeEmail = async (req: AuthRequest, res: Response) => {
     return res.status(500).json({ success: false, msg: "Internal server error" });
   }
 };
+
+
+export const changeName = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, msg: "Unauthorized" });
+
+    const userId = req.user.id;
+    const { newName } = req.body as { newName: string };
+
+    if (!newName || newName.trim() === "") {
+      return res.status(400).json({ success: false, msg: "New name is required" });
+    }
+
+    const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
+
+    if (!existingUser) return res.status(404).json({ success: false, msg: "User not found" });
+    if (existingUser.name === newName) {
+      return res.status(400).json({ success: false, msg: "New name cannot be same as old name" });
+    }
+
+    const updated = await db
+      .update(users)
+      .set({ name: newName })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (updated.length === 0) {
+      return res.status(500).json({ success: false, msg: "Couldn't update name" });
+    }
+
+    res.status(200).json({ success: true, msg: "Name updated successfully" });
+  } catch (err) {
+    console.error("changeName error:", err);
+    res.status(500).json({ success: false, msg: "Internal server error" });
+  }
+};
+
+export const changeAvatar = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ success: false, msg: "Unauthorized" });
+
+    const userId = req.user.id;
+    const { avatarName } = req.body as { avatarName: string };
+
+   
+
+    const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
+
+    if (!existingUser) return res.status(404).json({ success: false, msg: "User not found" });
+    if (existingUser.avatar === avatarName) {
+      return res.status(400).json({ success: false, msg: "Selected avatar is already in use" });
+    }
+
+    const updated = await db
+      .update(users)
+      .set({ avatar: avatarName })
+      .where(eq(users.id, userId))
+      .returning();
+
+    if (updated.length === 0) {
+      return res.status(500).json({ success: false, msg: "Couldn't update avatar" });
+    }
+
+    res.status(200).json({ success: true, msg: "Avatar updated successfully", avatar: avatarName });
+  } catch (err) {
+    console.error("changeAvatar error:", err);
+    res.status(500).json({ success: false, msg: "Internal server error" });
+  }
+};

@@ -35,6 +35,20 @@ export const changePasswordSchema = z.object({
   newPassword:z.string().min(6, "Password required").transform(p => p.trim()),
 });
 
+// changeName
+export const changeNameSchema = z.object({
+ 
+ newName: z.string().min(2, "Name must be at least 2 characters").transform(n => n.trim()),
+});
+// changeAvatar
+export const changeAvatarSchema = z.object({
+ 
+ newAvatar: z.string()
+});
+
+
+
+
 // forgotPass
 export const forgotPasswordSchema = z.object({
   email: emailSchema,
