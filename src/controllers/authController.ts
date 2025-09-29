@@ -9,6 +9,7 @@ import { AuthRequest } from "../middleware/auth";
 import { NewOtp, otps } from "../db/schema/otps";
 
 import { handleOtpRequest } from "../helpers/auth/handleOtps";
+import { createDefaultCategoriesForUser } from "../helpers/category/defaultCategoriesAdder";
 
 
 interface SignupBody {
@@ -216,6 +217,8 @@ export const signup = async (req: Request<{}, {}, SignupBody>, res: Response) =>
     if (!user) {
       return res.status(500).json({ success: false, msg: "Failed to create user" });
     }
+
+    await createDefaultCategoriesForUser(user.id);
 
     const token = jwt.sign({ id: user.id, email: user.email }, getJwtSecret(), {
       expiresIn: process.env.JWT_EXPIRES_IN || "7d",

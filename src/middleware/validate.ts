@@ -1,9 +1,8 @@
-
-import { ZodObject, ZodRawShape, ZodError } from "zod";
+import { ZodSchema, ZodError } from "zod";
 import { Request, Response, NextFunction } from "express";
 
 export const validate =
-  (schema: ZodObject<ZodRawShape>) =>
+  (schema: ZodSchema) =>
   (req: Request, res: Response, next: NextFunction) => {
     try {
       req.body = schema.parse(req.body);
@@ -15,7 +14,6 @@ export const validate =
           errors: err.issues.map((issue) => issue.message),
         });
       }
-
       return res.status(400).json({
         success: false,
         errors: [err.message || "Invalid request body"],
