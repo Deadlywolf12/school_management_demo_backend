@@ -1,6 +1,6 @@
 
 import { eq } from "drizzle-orm";
-import { categories } from "../../db/schema/category";
+import { categories, NewCategory } from "../../db/schema/category";
 import { db } from "../../db";
 
 export const createDefaultCategoriesForUser = async (userId: string) => {
@@ -29,13 +29,16 @@ export const createDefaultCategoriesForUser = async (userId: string) => {
     (c) => !existingSet.has(`${c.name.toLowerCase()}-${c.type}`)
   );
 
-  if (toInsert.length > 0) {
-    await db.insert(categories).values(
-      toInsert.map((c) => ({
+ 
+if (toInsert.length > 0) {
+  await db.insert(categories).values(
+    toInsert.map(
+      (c): NewCategory => ({
         userId,
         name: c.name,
         type: c.type,
-      }))
-    );
-  }
+      })
+    )
+  );
+}
 };

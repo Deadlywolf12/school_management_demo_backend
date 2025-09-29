@@ -43,6 +43,13 @@
       "when": 1758997052115,
       "tag": "0005_serious_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1759159404955,
+      "tag": "0006_sturdy_next_avengers",
+      "breakpoints": true
     }
   ]
 }

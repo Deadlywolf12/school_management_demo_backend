@@ -1,6 +1,7 @@
 import express from "express";
 import authRouter from "./routes/authRoutes";
 import catRoute from "./routes/categoryRoutes";
+import transactionRoute from "./routes/transactionRoute";
 
 
 const app = express();
@@ -8,6 +9,7 @@ const app = express();
 app.use(express.json());
 app.use("/auth",authRouter);
 app.use("/categories",catRoute);
+app.use("/transactions",transactionRoute);
 
 app.get("/",(req,res)=>{
     res.send("this is the backend of khata-book432")

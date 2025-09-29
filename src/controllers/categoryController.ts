@@ -44,30 +44,27 @@ export const syncCategories = async (req: AuthRequest, res: Response) => {
         continue;
       }
 
-    
-      const updated = await db
-        .update(categories)
-        .set({
-          name: cat.catName,
-          type: cat.catType,
-        
-           updatedAt: new Date(),
-        })
-        .where(and(eq(categories.id, cat.catId),eq(categories.userId,userId)))
-        .returning();
+    await db
+  .insert(categories)
+  .values({
+    id: cat.catId,
+    userId,
+    name: cat.catName,
+    type: cat.catType,
+    createdAt: new Date(cat.createdAt),
+    updatedAt: new Date(cat.updatedAt),
+    isDeleted: false,
+  })
+  .onConflictDoUpdate({
+    target: categories.id,
+    set: {
+      name: cat.catName,
+      type: cat.catType,
+      updatedAt: new Date(),
+      isDeleted: false,
+    },
+  });}
 
-      if (updated.length === 0) {
-    
-        await db.insert(categories).values({
-          id: cat.catId,
-          userId,
-          name: cat.catName,
-          type: cat.catType,
-          createdAt: new Date(cat.createdAt),
-           updatedAt: new Date(),
-        });
-      }
-    }
 
     return res.json({ success: true, msg: "Categories synced successfully" });
   } catch (err) {

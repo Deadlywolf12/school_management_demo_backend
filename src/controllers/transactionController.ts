@@ -29,7 +29,7 @@ export const getTransactions = async (req:AuthRequest,res:Response)=>{
 export const syncTransactionData = async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ success: false, msg: "Unauthorized" });
+      return res.status(401).json({ success: false, msg: "Unauthorized"});
     }
 
     const { transactions: incomingTransactions } = req.body as TransactionSyncInput;
@@ -44,33 +44,30 @@ export const syncTransactionData = async (req: AuthRequest, res: Response) => {
         continue;
       }
 
-      const updated = await db
-        .update(transactions)
-        .set({
-          categoryId: txn.categoryId,
-          type: txn.type,
-          amount: txn.amount,
-          note: txn.note,
-          date: txn.date,
-          updatedAt: txn.updatedAt,
-        })
-        .where(and(eq(transactions.id, txn.id),eq(transactions.userId,userId)))
-      
-        .returning();
-
-      if (updated.length === 0) {
-        await db.insert(transactions).values({
-          id: txn.id,
-          userId,
-          categoryId: txn.categoryId,
-          type: txn.type,
-          amount: txn.amount,
-          note: txn.note,
-          date: txn.date,
-          createdAt: txn.createdAt,
-          updatedAt: txn.updatedAt,
-        });
-      }
+await db
+  .insert(transactions)
+  .values({
+    id: txn.id,
+    userId,
+    categoryId: txn.categoryId,
+    type: txn.type,
+    amount: txn.amount,
+    note: txn.note,
+    date: txn.date,
+    createdAt: txn.createdAt,
+    updatedAt: txn.updatedAt,
+  })
+  .onConflictDoUpdate({
+    target: transactions.id,
+    set: {
+      categoryId: txn.categoryId,
+      type: txn.type,
+      amount: txn.amount,
+      note: txn.note,
+      date: txn.date,
+      updatedAt: txn.updatedAt,
+    },
+  });
     }
 
     return res.status(200).json({ success: true, msg: "Transactions synced successfully" });
