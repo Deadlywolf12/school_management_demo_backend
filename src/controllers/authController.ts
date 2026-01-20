@@ -9,11 +9,11 @@ import { AuthRequest } from "../middleware/auth";
 import { NewOtp, otps } from "../db/schema/otps";
 
 import { handleOtpRequest } from "../helpers/auth/handleOtps";
-import { createDefaultCategoriesForUser } from "../helpers/category/defaultCategoriesAdder";
 
+type UserRole = "admin" | "teacher" | "student" | "parent" | "staff";
 
 interface SignupBody {
-  otp: string;
+  role: UserRole;
   name: string;
   email: string;
   password: string;
@@ -196,41 +196,44 @@ export const resendOtp = async (req: Request, res: Response, purposeArg?: string
 
 export const signup = async (req: Request<{}, {}, SignupBody>, res: Response) => {
   try {
-    const { email, name, password, otp } = req.body;
-  
+     const { email, name, password, role } = req.body;
+
     const emailNormalized = email.trim().toLowerCase();
 
-    const isVerified = await db.query.otps.findFirst({
-      where: (table, { and, eq, gt }) =>
-        and(eq(table.email, emailNormalized), eq(table.otp, otp), gt(table.expiresAt, new Date())),
-    });
-    if (!isVerified) {
-      return res.status(400).json({ success: false, msg: "Invalid or expired OTP" });
-    }
-    await db.delete(otps).where(eq(otps.id, isVerified.id));
+    // Check if user already exists
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, emailNormalized));
 
+    if (existingUser) {
+      return res.status(400).json({ success: false, msg: "User already exists" });
+    }
+
+    // Hash the password
     const hashedPassword = await bcrypt.hash(password, 8);
-    const newUser: NewUser = { email: emailNormalized, name, password: hashedPassword };
+
+    // Create new user
+    const newUser = { email: emailNormalized, name, password: hashedPassword, role };
 
     const insertedUsers = await db.insert(users).values(newUser).returning();
     const user = insertedUsers[0];
+
     if (!user) {
       return res.status(500).json({ success: false, msg: "Failed to create user" });
     }
 
-    await createDefaultCategoriesForUser(user.id);
-
-    const token = jwt.sign({ id: user.id, email: user.email }, getJwtSecret(), {
-      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-    } as SignOptions);
-
+    // Remove password before returning
     const { password: _, ...safeUser } = user;
-    res.status(201).json({ success: true, user: safeUser, token });
+
+    res.status(201).json({ success: true, user: safeUser });
   } catch (err) {
     console.error("Signup error:", err);
     res.status(500).json({ success: false, msg: "Internal server error" });
   }
 };
+
+
 
 export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) => {
   try {
@@ -366,35 +369,35 @@ export const changeName = async (req: AuthRequest, res: Response) => {
   }
 };
 
-export const changeAvatar = async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.user) return res.status(401).json({ success: false, msg: "Unauthorized" });
+// export const changeAvatar = async (req: AuthRequest, res: Response) => {
+//   try {
+//     if (!req.user) return res.status(401).json({ success: false, msg: "Unauthorized" });
 
-    const userId = req.user.id;
-    const { avatarName } = req.body as { avatarName: string };
+//     const userId = req.user.id;
+//     const { avatarName } = req.body as { avatarName: string };
 
    
 
-    const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
+//     const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
 
-    if (!existingUser) return res.status(404).json({ success: false, msg: "User not found" });
-    if (existingUser.avatar === avatarName) {
-      return res.status(400).json({ success: false, msg: "Selected avatar is already in use" });
-    }
+//     if (!existingUser) return res.status(404).json({ success: false, msg: "User not found" });
+//     if (existingUser.avatar === avatarName) {
+//       return res.status(400).json({ success: false, msg: "Selected avatar is already in use" });
+//     }
 
-    const updated = await db
-      .update(users)
-      .set({ avatar: avatarName })
-      .where(eq(users.id, userId))
-      .returning();
+//     const updated = await db
+//       .update(users)
+//       .set({ avatar: avatarName })
+//       .where(eq(users.id, userId))
+//       .returning();
 
-    if (updated.length === 0) {
-      return res.status(500).json({ success: false, msg: "Couldn't update avatar" });
-    }
+//     if (updated.length === 0) {
+//       return res.status(500).json({ success: false, msg: "Couldn't update avatar" });
+//     }
 
-    res.status(200).json({ success: true, msg: "Avatar updated successfully", avatar: avatarName });
-  } catch (err) {
-    console.error("changeAvatar error:", err);
-    res.status(500).json({ success: false, msg: "Internal server error" });
-  }
-};
+//     res.status(200).json({ success: true, msg: "Avatar updated successfully", avatar: avatarName });
+//   } catch (err) {
+//     console.error("changeAvatar error:", err);
+//     res.status(500).json({ success: false, msg: "Internal server error" });
+//   }
+// };

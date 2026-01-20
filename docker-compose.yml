@@ -1,6 +1,6 @@
 services:
   backend:
-    container_name: khata_book_container
+    container_name: school_management_container
     build:
       context: ./
     ports:
@@ -18,7 +18,7 @@ services:
 
   db:
     image: postgres:15
-    container_name: postgres_container
+    container_name: postgres_school_container
     restart: always
     environment:
       - POSTGRES_USER=${POSTGRES_USER}

@@ -1,9 +1,10 @@
 // routes/auth/authRoutes.ts
 import { Router } from "express";
 import { auth } from "../middleware/auth";
-import { getProfile, reqOtp, signin, signup, resendOtp, changePassword, changeName, forgotPassword, changeEmail, changeAvatar } from "../controllers/authController";
+import { getProfile, reqOtp, signin, signup, resendOtp, changePassword, changeName, forgotPassword, changeEmail } from "../controllers/authController";
 import { validate } from "../middleware/validate";
 import {changeAvatarSchema, changeEmailSchema, changeNameSchema, changePasswordSchema, forgotPasswordSchema, requestOtpSchema, resendOtpSchema, loginSchema as signinSchema, signupSchema } from "../validators/authValidators";
+import { adminAuth } from "../middleware/adminAuth";
 
 
 const authRouter = Router();
@@ -13,11 +14,11 @@ const authRouter = Router();
 authRouter.get("/", auth, getProfile);
 
 //signup
-authRouter.post("/signup",validate(signupSchema), signup);
-authRouter.post("/request-otp", validate(requestOtpSchema), (req, res) =>
-  reqOtp(req, res,"signup"));
-authRouter.post("/resend-otp",validate(resendOtpSchema), (req, res) =>
-  resendOtp(req, res, "signup"));
+authRouter.post("/signup",auth,adminAuth,validate(signupSchema), signup);
+// authRouter.post("/request-otp", validate(requestOtpSchema), (req, res) =>
+//   reqOtp(req, res,"signup"));
+// authRouter.post("/resend-otp",validate(resendOtpSchema), (req, res) =>
+//   resendOtp(req, res, "signup"));
 
 //signin
 authRouter.post("/signin",validate(signinSchema), signin);
@@ -33,15 +34,15 @@ authRouter.post("/forgot/request-otp", validate(requestOtpSchema),  (req, res) =
 authRouter.post("/forgot/reset",validate(forgotPasswordSchema), forgotPassword);
 
 //changeEmail
-authRouter.post("/change-email/verify",auth ,validate(changeEmailSchema), changeEmail);
-authRouter.post("/change-email/request-otp",auth, validate(requestOtpSchema),  (req, res) =>
-  reqOtp(req, res, "changeEmail"));
-authRouter.post("/change-email/resend-otp",auth,validate(resendOtpSchema), (req, res) =>
-  resendOtp(req, res, "changeEmail"));
+// authRouter.post("/change-email/verify",auth ,validate(changeEmailSchema), changeEmail);
+// authRouter.post("/change-email/request-otp",auth, validate(requestOtpSchema),  (req, res) =>
+//   reqOtp(req, res, "changeEmail"));
+// authRouter.post("/change-email/resend-otp",auth,validate(resendOtpSchema), (req, res) =>
+//   resendOtp(req, res, "changeEmail"));
 // change name
 authRouter.put("/change-name",auth,validate(changeNameSchema),changeName);
 // change avatar
-authRouter.put("/change-avatar",auth,validate(changeAvatarSchema),changeAvatar);
+// authRouter.put("/change-avatar",auth,validate(changeAvatarSchema),changeAvatar);
 
 
 export default authRouter;
