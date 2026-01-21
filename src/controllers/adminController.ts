@@ -238,3 +238,139 @@ export const createUser = async (
     });
   }
 };
+
+
+interface QueryParams {
+  role?: Role;
+  page?: string; 
+  limit?: string; 
+}
+
+export const getAllUsers = async (req: Request<{}, {}, {}, QueryParams>, res: Response) => {
+  try {
+    const { role, page = "1", limit = "10" } = req.query;
+    const pageNumber = parseInt(page, 10) || 1;
+    const pageSize = parseInt(limit, 10) || 10;
+    const offset = (pageNumber - 1) * pageSize;
+
+    if (!role) {
+      return res.status(400).json({ success: false, message: "Role is required" });
+    }
+
+    let data;
+
+    switch (role) {
+      case "teacher":
+        data = await db
+          .select({
+            id: teachers.id,
+            name: teachers.name,
+            email: users.email,
+            gender: teachers.gender,
+            employeeId: teachers.employeeId,
+            department: teachers.department,
+            subject: teachers.subject,
+            classTeacherOf: teachers.classTeacherOf,
+            phoneNumber: teachers.phoneNumber,
+            address: teachers.address,
+            joiningDate: teachers.joiningDate,
+            salary: teachers.salary,
+          })
+          .from(teachers)
+          .innerJoin(users, eq(teachers.userId, users.id))
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      case "student":
+        data = await db
+          .select({
+            id: students.id,
+            name: students.name,
+            email: users.email,
+            gender: students.gender,
+            studentId: students.studentId,
+            class: students.class,
+            enrollmentYear: students.enrollmentYear,
+            emergencyNumber: students.emergencyNumber,
+            address: students.address,
+            bloodGroup: students.bloodGroup,
+            dateOfBirth: students.dateOfBirth,
+          })
+          .from(students)
+          .innerJoin(users, eq(students.userId, users.id))
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      case "staff":
+        data = await db
+          .select({
+            id: staff.id,
+            name: staff.name,
+            email: users.email,
+            gender: staff.gender,
+            employeeId: staff.employeeId,
+            department: staff.department,
+            roleDetails: staff.roleDetails,
+            phoneNumber: staff.phoneNumber,
+            address: staff.address,
+            joiningDate: staff.joiningDate,
+            salary: staff.salary,
+          })
+          .from(staff)
+          .innerJoin(users, eq(staff.userId, users.id))
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      case "parent":
+        data = await db
+          .select({
+            id: parents.id,
+            name: parents.name,
+            email: users.email,
+            guardianName: parents.guardianName,
+             gender: parents.gender,
+            phoneNumber: parents.phoneNumber,
+            address: parents.address,
+          })
+          .from(parents)
+          .innerJoin(users, eq(parents.userId, users.id))
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      case "admin":
+        data = await db
+          .select({
+            id: users.id,
+          
+            email: users.email,
+            role: users.role,
+          })
+          .from(users)
+          .where(eq(users.role, "admin"))
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      default:
+        return res.status(400).json({ success: false, message: "Invalid role" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      role,
+      page: pageNumber,
+      limit: pageSize,
+      data,
+    });
+  } catch (err: unknown) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+};
