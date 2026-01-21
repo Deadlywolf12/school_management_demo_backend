@@ -8,11 +8,12 @@ export const staff = pgTable("staff", {
   employeeId: text("employee_id").notNull().unique(),
   department: text("department").notNull(),
   roleDetails: text("role_details").notNull(), // e.g., "finance", "library"
-
+ name:text("name").notNull().default(""),
   phoneNumber: text("phone_number").notNull().unique(),
   address: text("address").notNull().default(""),
   joiningDate: timestamp("joining_date").notNull().defaultNow(),
   salary: text("salary").notNull().default("0.00"),
+    gender: text("gender").default("Not specified"),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

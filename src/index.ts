@@ -1,14 +1,16 @@
 import express from "express";
 import authRouter from "./routes/authRoutes";
 import adminRouter from "./routes/adminRoutes";
+import teacherRouter from "./routes/teacherRoutes";
 
 
 
 const app = express();
 
 app.use(express.json());
-app.use("/auth",authRouter);
-app.use("/admin",adminRouter);
+app.use("/api/v1/auth",authRouter);
+app.use("/api/v1/admin",adminRouter);
+app.use("/api/v1/admin/teacher",teacherRouter);
 
 
 app.get("/",(req,res)=>{

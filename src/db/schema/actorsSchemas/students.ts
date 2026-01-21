@@ -7,7 +7,7 @@ export const students = pgTable("students", {
     .notNull()
     .references(() => users.id)
     .unique(), // one-to-one with users table
-
+ name:text("name").notNull().default(""),
   studentId: text("student_id").notNull().unique(),
   class: text("class").notNull(),
   enrollmentYear: integer("enrollment_year").notNull(),

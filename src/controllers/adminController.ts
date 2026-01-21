@@ -21,6 +21,8 @@ export interface TeacherDetails {
   address?: string;
   joiningDate?: string; // ISO date string
   salary?: string; // Changed to string to match schema
+  name?:string;
+    gender?: string;
 }
 
 export interface StudentDetails {
@@ -33,6 +35,7 @@ export interface StudentDetails {
   bloodGroup?: string;
   dateOfBirth?: string; // ISO date
   gender?: string;
+  name?:string;
 }
 
 export interface StaffDetails {
@@ -43,6 +46,8 @@ export interface StaffDetails {
   address?: string;
   joiningDate?: string;
   salary?: string; // Changed to string to match schema (was number)
+  name?:string;
+   gender?: string;
 }
 
 export interface ParentDetails {
@@ -50,12 +55,14 @@ export interface ParentDetails {
   phoneNumber: string;
   address?: string;
   studentIds?: string[];
+  name?:string;
+    gender?: string;
 }
 
 export interface CreateUserBody {
   role: Role;
   email: string;
-  name: string;
+  
   password: string;
 
   teacherDetails?: TeacherDetails;
@@ -72,12 +79,13 @@ export const createUser = async (
     const {
       role,
       email,
-      name,
+   
       password,
       teacherDetails,
       studentDetails,
       staffDetails,
       parentDetails,
+      
     } = req.body;
 
     const emailNormalized = email.trim().toLowerCase();
@@ -122,7 +130,9 @@ export const createUser = async (
           joiningDate: teacherDetails.joiningDate
             ? new Date(teacherDetails.joiningDate)
             : new Date(),
-          salary: teacherDetails.salary ?? "0.00", // Must be string to match schema
+          salary: teacherDetails.salary ?? "0.00", 
+           name: teacherDetails.name ?? "",
+  gender: teacherDetails.gender ?? "Not specified",
         });
         break;
 
@@ -141,6 +151,8 @@ export const createUser = async (
             ? new Date(studentDetails.dateOfBirth)
             : new Date(),
           gender: studentDetails.gender ?? "Not specified",
+           name: studentDetails.name ?? '',
+
         });
 
         // Insert into join table if guardianIds exist
@@ -168,7 +180,9 @@ export const createUser = async (
           joiningDate: staffDetails.joiningDate
             ? new Date(staffDetails.joiningDate)
             : new Date(),
-          salary: staffDetails.salary ?? "0.00", // Changed to string to match schema
+          salary: staffDetails.salary ?? "0.00", 
+           name: staffDetails.name ?? '',
+  gender: staffDetails.gender ?? "Not specified",
         });
         break;
 
@@ -180,6 +194,8 @@ export const createUser = async (
           guardianName: parentDetails.guardianName,
           phoneNumber: parentDetails.phoneNumber,
           address: parentDetails.address ?? "",
+           name: parentDetails.name ?? '',
+  gender: parentDetails.gender ?? "Not specified",
         });
 
         // Insert into join table if studentIds exist

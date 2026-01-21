@@ -9,7 +9,8 @@ export const parents = pgTable("parents", {
   phoneNumber: text("phone_number").notNull().unique(),
   address: text("address").notNull().default(""),
 guardianName: text("guardian_name").notNull(), // father/mother name
-
+ name:text("name").notNull().default(""),
+   gender: text("gender").default("Not specified"),
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
