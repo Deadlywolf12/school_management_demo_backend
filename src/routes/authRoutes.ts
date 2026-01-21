@@ -4,7 +4,7 @@ import { auth } from "../middleware/auth";
 import { signin, signup, changePassword, changeEmail } from "../controllers/authController";
 
 import { validate } from "../middleware/validate";
-import {changeAvatarSchema, changeEmailSchema, changeNameSchema, changePasswordSchema, createUsersSchema, forgotPasswordSchema, requestOtpSchema, resendOtpSchema, loginSchema as signinSchema, signupSchema } from "../validators/authValidators";
+import {changeAvatarSchema, changeEmailSchema, changeNameSchema, changePasswordSchema, loginSchema as signinSchema, signupSchema } from "../validators/authValidators";
 import { adminAuth } from "../middleware/adminAuth";
 import { createUser } from "../controllers/adminController";
 
@@ -17,7 +17,7 @@ const authRouter = Router();
 
 //signup
 authRouter.post("/signup",auth,validate(signupSchema), signup);
-authRouter.post("/createUsers",auth,adminAuth,validate(createUsersSchema), createUser);
+
 // authRouter.post("/request-otp", validate(requestOtpSchema), (req, res) =>
 //   reqOtp(req, res,"signup"));
 // authRouter.post("/resend-otp",validate(resendOtpSchema), (req, res) =>

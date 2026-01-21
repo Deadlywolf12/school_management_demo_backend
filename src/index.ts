@@ -1,5 +1,6 @@
 import express from "express";
 import authRouter from "./routes/authRoutes";
+import adminRouter from "./routes/adminRoutes";
 
 
 
@@ -7,6 +8,7 @@ const app = express();
 
 app.use(express.json());
 app.use("/auth",authRouter);
+app.use("/admin",adminRouter);
 
 
 app.get("/",(req,res)=>{
