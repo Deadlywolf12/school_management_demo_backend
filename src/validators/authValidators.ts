@@ -24,6 +24,18 @@ export const signupSchema = z.object({
     }),
 });
 
+export const createUsersSchema = z.object({
+ 
+  email: z.string().email().transform(e => e.trim().toLowerCase()),
+  password: z.string().min(6).transform(p => p.trim()),
+  role: z
+    .string()
+    .transform(r => r.trim().toLowerCase())
+    .refine(r => validRoles.includes(r), {
+      message: `Role must be one of: ${validRoles.join(", ")}`,
+    }),
+});
+
 // Login
 export const loginSchema = z.object({
   email: emailSchema,
