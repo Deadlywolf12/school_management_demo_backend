@@ -29,11 +29,11 @@ interface ChangePasswordBody{
 }
 type ChangePasswordRequest = AuthRequest & { body: ChangePasswordBody };
 
-interface forgotPasswordBody{
-  email: string;
-  otp:string;
-  newPassword:string;
-}
+// interface forgotPasswordBody{
+//   email: string;
+//   otp:string;
+//   newPassword:string;
+// }
 const getJwtSecret = (): Secret => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET not configured");
@@ -46,48 +46,48 @@ const getJwtSecret = (): Secret => {
 
 
 
-export const forgotPassword = async (req: Request<{}, {}, forgotPasswordBody>, res: Response) => {
-  try {
-    const { email, otp, newPassword } = req.body;
-    const emailNormalized = email.trim().toLowerCase();
+// export const forgotPassword = async (req: Request<{}, {}, forgotPasswordBody>, res: Response) => {
+//   try {
+//     const { email, otp, newPassword } = req.body;
+//     const emailNormalized = email.trim().toLowerCase();
 
-    const isVerified = await db.query.otps.findFirst({
-      where: (table, { and, eq, gt }) =>
-        and(
-          eq(table.email, emailNormalized),
-          eq(table.otp, otp),
-          eq(table.purpose, "forgotPassword"),
-          gt(table.expiresAt, new Date())
-        ),
-    });
+//     const isVerified = await db.query.otps.findFirst({
+//       where: (table, { and, eq, gt }) =>
+//         and(
+//           eq(table.email, emailNormalized),
+//           eq(table.otp, otp),
+//           eq(table.purpose, "forgotPassword"),
+//           gt(table.expiresAt, new Date())
+//         ),
+//     });
 
-    if (!isVerified) {
-      return res.status(400).json({ success: false, msg: "Invalid or expired OTP" });
-    }
+//     if (!isVerified) {
+//       return res.status(400).json({ success: false, msg: "Invalid or expired OTP" });
+//     }
 
  
-    await db.delete(otps).where(eq(otps.id, isVerified.id));
+//     await db.delete(otps).where(eq(otps.id, isVerified.id));
 
    
-    const hashedPassword = await bcrypt.hash(newPassword, 8);
+//     const hashedPassword = await bcrypt.hash(newPassword, 8);
 
    
-    const result = await db
-      .update(users)
-      .set({ password: hashedPassword })
-      .where(eq(users.email, emailNormalized))
-      .returning();
+//     const result = await db
+//       .update(users)
+//       .set({ password: hashedPassword })
+//       .where(eq(users.email, emailNormalized))
+//       .returning();
 
-    if (!result || result.length === 0) {
-      return res.status(400).json({ success: false, msg: "Failed to change password" });
-    }
+//     if (!result || result.length === 0) {
+//       return res.status(400).json({ success: false, msg: "Failed to change password" });
+//     }
 
-    return res.status(200).json({ success: true, msg: "Password changed successfully" });
-  } catch (err) {
-    console.error("ForgotPassword error:", err);
-    return res.status(500).json({ success: false, msg: "Internal server error" });
-  }
-};
+//     return res.status(200).json({ success: true, msg: "Password changed successfully" });
+//   } catch (err) {
+//     console.error("ForgotPassword error:", err);
+//     return res.status(500).json({ success: false, msg: "Internal server error" });
+//   }
+// };
 
 
 
@@ -137,61 +137,61 @@ export const changePassword = async (
 };
 
 
-export const getProfile = async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ success: false, msg: "Unauthorized" });
-    }
-    const [user] = await db.select().from(users).where(eq(users.id, req.user.id));
-    if (!user) {
-      return res.status(404).json({ success: false, msg: "User not found" });
-    }
-    const { password, ...safeUser } = user;
-    res.json({ success: true, user: safeUser, token: req.token });
-  } catch (e) {
-    res.status(500).json({ success: false, msg: "Internal server error" });
-  }
-};
+// export const getProfile = async (req: AuthRequest, res: Response) => {
+//   try {
+//     if (!req.user) {
+//       return res.status(401).json({ success: false, msg: "Unauthorized" });
+//     }
+//     const [user] = await db.select().from(users).where(eq(users.id, req.user.id));
+//     if (!user) {
+//       return res.status(404).json({ success: false, msg: "User not found" });
+//     }
+//     const { password, ...safeUser } = user;
+//     res.json({ success: true, user: safeUser, token: req.token });
+//   } catch (e) {
+//     res.status(500).json({ success: false, msg: "Internal server error" });
+//   }
+// };
 
-export const reqOtp = async (req: Request, res: Response, purposeArg?: string) => {
-  try {
-    const { email } = req.body;
-    const purpose = purposeArg || req.body.purpose || "signup"; 
+// export const reqOtp = async (req: Request, res: Response, purposeArg?: string) => {
+//   try {
+//     const { email } = req.body;
+//     const purpose = purposeArg || req.body.purpose || "signup"; 
 
-    const result = await handleOtpRequest(email, { forResend: false, purpose });
+//     const result = await handleOtpRequest(email, { forResend: false, purpose });
 
-    if (!result.success) {
-      return res.status(result.msg.includes("Please wait") ? 429 : 400).json(result);
-    }
+//     if (!result.success) {
+//       return res.status(result.msg.includes("Please wait") ? 429 : 400).json(result);
+//     }
 
-    res.json(result);
-  } catch (err) {
-    console.error("Request OTP error:", err);
-    res.status(500).json({ success: false, msg: "Internal server error" });
-  }
-};
+//     res.json(result);
+//   } catch (err) {
+//     console.error("Request OTP error:", err);
+//     res.status(500).json({ success: false, msg: "Internal server error" });
+//   }
+// };
 
 
-export const resendOtp = async (req: Request, res: Response, purposeArg?: string) => {
-  try {
-    const { email } = req.body;
-    const purpose = purposeArg || req.body.purpose || "signup"; 
+// export const resendOtp = async (req: Request, res: Response, purposeArg?: string) => {
+//   try {
+//     const { email } = req.body;
+//     const purpose = purposeArg || req.body.purpose || "signup"; 
 
-    if (!email?.trim()) {
-      return res.status(400).json({ success: false, msg: "Email is required" });
-    }
+//     if (!email?.trim()) {
+//       return res.status(400).json({ success: false, msg: "Email is required" });
+//     }
 
-    const result = await handleOtpRequest(email, { forResend: true, purpose });
-    if (!result.success) {
-      return res.status(result.msg.includes("Please wait") ? 429 : 400).json(result);
-    }
+//     const result = await handleOtpRequest(email, { forResend: true, purpose });
+//     if (!result.success) {
+//       return res.status(result.msg.includes("Please wait") ? 429 : 400).json(result);
+//     }
 
-    res.json(result);
-  } catch (err) {
-    console.error("Resend OTP error:", err);
-    res.status(500).json({ success: false, msg: "Internal server error" });
-  }
-};
+//     res.json(result);
+//   } catch (err) {
+//     console.error("Resend OTP error:", err);
+//     res.status(500).json({ success: false, msg: "Internal server error" });
+//   }
+// };
 
 
 export const signup = async (req: Request<{}, {}, SignupBody>, res: Response) => {
@@ -266,7 +266,7 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
 
 export const changeEmail = async (req: AuthRequest, res: Response) => {
   try {
-    const { password, newEmail, otp } = req.body;
+    const { password, newEmail} = req.body;
 
     if (!req.user) {
       return res.status(401).json({ success: false, msg: "Unauthorized" });
@@ -298,23 +298,6 @@ export const changeEmail = async (req: AuthRequest, res: Response) => {
     }
 
    
-    const otpRecord = await db.query.otps.findFirst({
-      where: (table, { and, eq, gt }) =>
-        and(
-          eq(table.email, newEmail.trim().toLowerCase()),
-          eq(table.otp, otp),
-          eq(table.purpose, "changeEmail"),
-          gt(table.expiresAt, new Date())
-        ),
-    });
-
-    if (!otpRecord) {
-      return res.status(400).json({ success: false, msg: "Invalid or expired OTP" });
-    }
-
-  
-    await db.delete(otps).where(eq(otps.id, otpRecord.id));
-
 
     const result = await db
       .update(users)

@@ -78,6 +78,6 @@ export const updateAvatarSchema = z.object({
 export const changeEmailSchema = z.object({
   password: z.string().min(6, "Password required"),
   newEmail: emailSchema,
-  otp: z.string().length(6, "OTP must be 6 digits"),
+  // otp: z.string().length(6, "OTP must be 6 digits"),
 });
 
