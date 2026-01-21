@@ -1,7 +1,7 @@
 // routes/auth/authRoutes.ts
 import { Router } from "express";
 import { auth } from "../middleware/auth";
-import { signin, signup, changePassword, changeName, changeEmail } from "../controllers/authController";
+import { signin, signup, changePassword, changeEmail } from "../controllers/authController";
 import { validate } from "../middleware/validate";
 import {changeAvatarSchema, changeEmailSchema, changeNameSchema, changePasswordSchema, forgotPasswordSchema, requestOtpSchema, resendOtpSchema, loginSchema as signinSchema, signupSchema } from "../validators/authValidators";
 import { adminAuth } from "../middleware/adminAuth";
@@ -40,7 +40,7 @@ authRouter.post("/change-email",auth ,validate(changeEmailSchema), changeEmail);
 // authRouter.post("/change-email/resend-otp",auth,validate(resendOtpSchema), (req, res) =>
 //   resendOtp(req, res, "changeEmail"));
 // change name
-authRouter.put("/change-name",auth,validate(changeNameSchema),changeName);
+// authRouter.put("/change-name",auth,validate(changeNameSchema),changeName);
 // change avatar
 // authRouter.put("/change-avatar",auth,validate(changeAvatarSchema),changeAvatar);
 

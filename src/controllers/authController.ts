@@ -14,7 +14,7 @@ type UserRole = "admin" | "teacher" | "student" | "parent" | "staff";
 
 interface SignupBody {
   role: UserRole;
-  name: string;
+ 
   email: string;
   password: string;
 }
@@ -196,7 +196,7 @@ export const changePassword = async (
 
 export const signup = async (req: Request<{}, {}, SignupBody>, res: Response) => {
   try {
-     const { email, name, password, role } = req.body;
+     const { email,password, role } = req.body;
 
     const emailNormalized = email.trim().toLowerCase();
 
@@ -214,7 +214,7 @@ export const signup = async (req: Request<{}, {}, SignupBody>, res: Response) =>
     const hashedPassword = await bcrypt.hash(password, 8);
 
     // Create new user
-    const newUser = { email: emailNormalized, name, password: hashedPassword, role };
+    const newUser = { email: emailNormalized, password: hashedPassword, role };
 
     const insertedUsers = await db.insert(users).values(newUser).returning();
     const user = insertedUsers[0];
@@ -317,40 +317,40 @@ export const changeEmail = async (req: AuthRequest, res: Response) => {
 };
 
 
-export const changeName = async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.user) return res.status(401).json({ success: false, msg: "Unauthorized" });
+// export const changeName = async (req: AuthRequest, res: Response) => {
+//   try {
+//     if (!req.user) return res.status(401).json({ success: false, msg: "Unauthorized" });
 
-    const userId = req.user.id;
-    const { newName } = req.body as { newName: string };
+//     const userId = req.user.id;
+//     const { newName } = req.body as { newName: string };
 
-    if (!newName || newName.trim() === "") {
-      return res.status(400).json({ success: false, msg: "New name is required" });
-    }
+//     if (!newName || newName.trim() === "") {
+//       return res.status(400).json({ success: false, msg: "New name is required" });
+//     }
 
-    const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
+//     const [existingUser] = await db.select().from(users).where(eq(users.id, userId));
 
-    if (!existingUser) return res.status(404).json({ success: false, msg: "User not found" });
-    if (existingUser.name === newName) {
-      return res.status(400).json({ success: false, msg: "New name cannot be same as old name" });
-    }
+//     if (!existingUser) return res.status(404).json({ success: false, msg: "User not found" });
+//     if (existingUser.name === newName) {
+//       return res.status(400).json({ success: false, msg: "New name cannot be same as old name" });
+//     }
 
-    const updated = await db
-      .update(users)
-      .set({ name: newName })
-      .where(eq(users.id, userId))
-      .returning();
+//     const updated = await db
+//       .update(users)
+//       .set({ name: newName })
+//       .where(eq(users.id, userId))
+//       .returning();
 
-    if (updated.length === 0) {
-      return res.status(500).json({ success: false, msg: "Couldn't update name" });
-    }
+//     if (updated.length === 0) {
+//       return res.status(500).json({ success: false, msg: "Couldn't update name" });
+//     }
 
-    res.status(200).json({ success: true, msg: "Name updated successfully" });
-  } catch (err) {
-    console.error("changeName error:", err);
-    res.status(500).json({ success: false, msg: "Internal server error" });
-  }
-};
+//     res.status(200).json({ success: true, msg: "Name updated successfully" });
+//   } catch (err) {
+//     console.error("changeName error:", err);
+//     res.status(500).json({ success: false, msg: "Internal server error" });
+//   }
+// };
 
 // export const changeAvatar = async (req: AuthRequest, res: Response) => {
 //   try {

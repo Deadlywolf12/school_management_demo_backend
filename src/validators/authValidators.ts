@@ -13,7 +13,7 @@ const otpSchema = z.string().regex(/^\d{6}$/, "OTP must be 6 digits");
 const validRoles = ["student", "parent", "staff", "admin"];
 
 export const signupSchema = z.object({
-  name: z.string().min(2).transform(n => n.trim()),
+ 
   email: z.string().email().transform(e => e.trim().toLowerCase()),
   password: z.string().min(6).transform(p => p.trim()),
   role: z
