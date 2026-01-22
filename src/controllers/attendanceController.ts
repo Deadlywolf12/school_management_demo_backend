@@ -1,9 +1,43 @@
 import { db } from "../db";
 import { attendance } from "../db/schema/attendance";
-
 import { users } from "../db/schema/users";
+import { teachers } from "../db/schema/actorsSchemas/teacher";
+import { students } from "../db/schema/actorsSchemas/students";
+import { staff } from "../db/schema/actorsSchemas/staff";
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { Request, Response } from "express";
+
+// Helper function to get user name from role-specific table
+async function getUserNameByRole(userId: string, role: string): Promise<string> {
+  try {
+    if (role === "teacher") {
+      const [teacher] = await db
+        .select({ name: teachers.name })
+        .from(teachers)
+        .where(eq(teachers.userId, userId))
+        .limit(1);
+      return teacher?.name || "Unknown";
+    } else if (role === "student") {
+      const [student] = await db
+        .select({ name: students.name })
+        .from(students)
+        .where(eq(students.userId, userId))
+        .limit(1);
+      return student?.name || "Unknown";
+    } else if (role === "staff") {
+      const [staffMember] = await db
+        .select({ name: staff.name })
+        .from(staff)
+        .where(eq(staff.userId, userId))
+        .limit(1);
+      return staffMember?.name || "Unknown";
+    }
+    return "Unknown";
+  } catch (err) {
+    console.error(`Error fetching name for user ${userId}:`, err);
+    return "Unknown";
+  }
+}
 
 // Get attendance with flexible filters
 export const getAttendance = async (req: Request, res: Response) => {
@@ -95,7 +129,6 @@ export const getAttendance = async (req: Request, res: Response) => {
         checkOutTime: attendance.checkOutTime,
         markedBy: attendance.markedBy,
         createdAt: attendance.createdAt,
-    
         userEmail: users.email,
       })
       .from(attendance)
@@ -103,18 +136,26 @@ export const getAttendance = async (req: Request, res: Response) => {
       .where(whereClause)
       .orderBy(desc(attendance.date));
 
+    // Fetch names from role-specific tables
+    const enrichedRecords = await Promise.all(
+      attendanceRecords.map(async (record) => ({
+        ...record,
+        userName: await getUserNameByRole(record.userId, record.role),
+      }))
+    );
+
     // Calculate statistics
     const stats = {
-      total: attendanceRecords.length,
-      present: attendanceRecords.filter((r) => r.status === "present").length,
-      absent: attendanceRecords.filter((r) => r.status === "absent").length,
-      late: attendanceRecords.filter((r) => r.status === "late").length,
-      leave: attendanceRecords.filter((r) => r.status === "leave").length,
+      total: enrichedRecords.length,
+      present: enrichedRecords.filter((r) => r.status === "present").length,
+      absent: enrichedRecords.filter((r) => r.status === "absent").length,
+      late: enrichedRecords.filter((r) => r.status === "late").length,
+      leave: enrichedRecords.filter((r) => r.status === "leave").length,
     };
 
     return res.status(200).json({
       success: true,
-      data: attendanceRecords,
+      data: enrichedRecords,
       stats,
       filters: {
         userId,
@@ -244,7 +285,6 @@ export const getDailyAttendanceByRole = async (req: Request, res: Response) => {
         checkInTime: attendance.checkInTime,
         checkOutTime: attendance.checkOutTime,
         markedBy: attendance.markedBy,
-       
         userEmail: users.email,
       })
       .from(attendance)
@@ -258,17 +298,25 @@ export const getDailyAttendanceByRole = async (req: Request, res: Response) => {
       )
       .orderBy(desc(attendance.checkInTime));
 
+    // Fetch names from role-specific tables
+    const enrichedRecords = await Promise.all(
+      attendanceRecords.map(async (record) => ({
+        ...record,
+        userName: await getUserNameByRole(record.userId, record.role),
+      }))
+    );
+
     const stats = {
-      total: attendanceRecords.length,
-      present: attendanceRecords.filter((r) => r.status === "present").length,
-      absent: attendanceRecords.filter((r) => r.status === "absent").length,
-      late: attendanceRecords.filter((r) => r.status === "late").length,
-      leave: attendanceRecords.filter((r) => r.status === "leave").length,
+      total: enrichedRecords.length,
+      present: enrichedRecords.filter((r) => r.status === "present").length,
+      absent: enrichedRecords.filter((r) => r.status === "absent").length,
+      late: enrichedRecords.filter((r) => r.status === "late").length,
+      leave: enrichedRecords.filter((r) => r.status === "leave").length,
       attendanceRate:
-        attendanceRecords.length > 0
+        enrichedRecords.length > 0
           ? (
-              (attendanceRecords.filter((r) => r.status === "present").length /
-                attendanceRecords.length) *
+              (enrichedRecords.filter((r) => r.status === "present").length /
+                enrichedRecords.length) *
               100
             ).toFixed(2) + "%"
           : "0%",
@@ -276,7 +324,7 @@ export const getDailyAttendanceByRole = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      data: attendanceRecords,
+      data: enrichedRecords,
       stats,
       role,
       date: targetDate.toISOString().split("T")[0],
@@ -346,6 +394,340 @@ export const getDailyAttendanceSummary = async (req: Request, res: Response) => 
     return res.status(200).json({
       success: true,
       summary,
+    });
+  } catch (err: unknown) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+};
+
+// Mark new attendance (by admin)
+export const markAttendance = async (req: Request, res: Response) => {
+  try {
+    const {
+      userId,
+      role,
+      date,
+      status,
+      remarks,
+      checkInTime,
+      checkOutTime,
+      markedBy,
+    } = req.body;
+
+    // Validate required fields
+    if (!userId || !role || !status) {
+      return res.status(400).json({
+        success: false,
+        message: "userId, role, and status are required",
+      });
+    }
+
+    // Validate role
+    const validRoles = ["student", "teacher", "staff", "admin", "parent"];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid role. Must be one of: ${validRoles.join(", ")}`,
+      });
+    }
+
+    // Validate status
+    const validStatuses = ["present", "absent", "late", "leave"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+      });
+    }
+
+    // Check if user exists
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Parse date or use current date
+    const attendanceDate = date ? new Date(date) : new Date();
+    const startOfDay = new Date(attendanceDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(attendanceDate.setHours(23, 59, 59, 999));
+
+    // Check if attendance already exists for this user on this date
+    const [existingAttendance] = await db
+      .select()
+      .from(attendance)
+      .where(
+        and(
+          eq(attendance.userId, userId),
+          gte(attendance.date, startOfDay),
+          lte(attendance.date, endOfDay)
+        )
+      );
+
+    if (existingAttendance) {
+      return res.status(400).json({
+        success: false,
+        message: "Attendance already marked for this date. Use update endpoint to modify.",
+        existingAttendance,
+      });
+    }
+
+    // Create new attendance record
+    const newAttendance = await db
+      .insert(attendance)
+      .values({
+        userId,
+        role,
+        date: attendanceDate,
+        status,
+        remarks: remarks || "",
+        checkInTime: checkInTime ? new Date(checkInTime) : null,
+        checkOutTime: checkOutTime ? new Date(checkOutTime) : null,
+        markedBy: markedBy || null,
+      })
+      .returning();
+
+    return res.status(201).json({
+      success: true,
+      message: "Attendance marked successfully",
+      data: newAttendance[0],
+    });
+  } catch (err: unknown) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+};
+
+// Update existing attendance (by admin)
+export const updateAttendance = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      status,
+      remarks,
+      checkInTime,
+      checkOutTime,
+      markedBy,
+    } = req.body;
+
+    // Validate attendance ID
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Attendance ID is required",
+      });
+    }
+
+    // Check if attendance exists
+    const [existingAttendance] = await db
+      .select()
+      .from(attendance)
+      .where(eq(attendance.id, id));
+
+    if (!existingAttendance) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance record not found",
+      });
+    }
+
+    // Validate status if provided
+    if (status) {
+      const validStatuses = ["present", "absent", "late", "leave"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid status. Must be one of: ${validStatuses.join(", ")}`,
+        });
+      }
+    }
+
+    // Build update object with only provided fields
+    const updateData: any = {
+      updatedAt: new Date(),
+    };
+
+    if (status !== undefined) updateData.status = status;
+    if (remarks !== undefined) updateData.remarks = remarks;
+    if (checkInTime !== undefined) updateData.checkInTime = checkInTime ? new Date(checkInTime) : null;
+    if (checkOutTime !== undefined) updateData.checkOutTime = checkOutTime ? new Date(checkOutTime) : null;
+    if (markedBy !== undefined) updateData.markedBy = markedBy;
+
+    // Update attendance
+    const updatedAttendance = await db
+      .update(attendance)
+      .set(updateData)
+      .where(eq(attendance.id, id))
+      .returning();
+
+    return res.status(200).json({
+      success: true,
+      message: "Attendance updated successfully",
+      data: updatedAttendance[0],
+    });
+  } catch (err: unknown) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+};
+
+// Mark bulk attendance (multiple users at once)
+export const markBulkAttendance = async (req: Request, res: Response) => {
+  try {
+    const { attendanceList, markedBy } = req.body;
+
+    // Validate input
+    if (!attendanceList || !Array.isArray(attendanceList) || attendanceList.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "attendanceList must be a non-empty array",
+      });
+    }
+
+    const results: {
+      success: Array<{ userId: string; attendanceId: string }>;
+      failed: Array<{ userId: string; error: string }>;
+    } = {
+      success: [],
+      failed: [],
+    };
+
+    // Process each attendance entry
+    for (const entry of attendanceList) {
+      try {
+        const { userId, role, date, status, remarks, checkInTime, checkOutTime } = entry;
+
+        // Validate required fields
+        if (!userId || !role || !status) {
+          results.failed.push({
+            userId: userId || "unknown",
+            error: "userId, role, and status are required",
+          });
+          continue;
+        }
+
+        // Parse date or use current date
+        const attendanceDate = date ? new Date(date) : new Date();
+        const startOfDay = new Date(attendanceDate.setHours(0, 0, 0, 0));
+        const endOfDay = new Date(attendanceDate.setHours(23, 59, 59, 999));
+
+        // Check if attendance already exists
+        const [existingAttendance] = await db
+          .select()
+          .from(attendance)
+          .where(
+            and(
+              eq(attendance.userId, userId),
+              gte(attendance.date, startOfDay),
+              lte(attendance.date, endOfDay)
+            )
+          );
+
+        if (existingAttendance) {
+          results.failed.push({
+            userId,
+            error: "Attendance already exists for this date",
+          });
+          continue;
+        }
+
+        // Create attendance record
+        const newAttendance = await db
+          .insert(attendance)
+          .values({
+            userId,
+            role,
+            date: attendanceDate,
+            status,
+            remarks: remarks || "",
+            checkInTime: checkInTime ? new Date(checkInTime) : null,
+            checkOutTime: checkOutTime ? new Date(checkOutTime) : null,
+            markedBy: markedBy || null,
+          })
+          .returning();
+
+        if (!newAttendance[0]) {
+          results.failed.push({
+            userId,
+            error: "Failed to create attendance record",
+          });
+          continue;
+        }
+
+        results.success.push({
+          userId,
+          attendanceId: newAttendance[0].id,
+        });
+      } catch (err) {
+        results.failed.push({
+          userId: entry.userId || "unknown",
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Marked ${results.success.length} attendance records successfully, ${results.failed.length} failed`,
+      results,
+    });
+  } catch (err: unknown) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+};
+
+// Delete attendance record
+export const deleteAttendance = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Attendance ID is required",
+      });
+    }
+
+    // Check if attendance exists
+    const [existingAttendance] = await db
+      .select()
+      .from(attendance)
+      .where(eq(attendance.id, id));
+
+    if (!existingAttendance) {
+      return res.status(404).json({
+        success: false,
+        message: "Attendance record not found",
+      });
+    }
+
+    // Delete attendance
+    await db.delete(attendance).where(eq(attendance.id, id));
+
+    return res.status(200).json({
+      success: true,
+      message: "Attendance deleted successfully",
+      deletedRecord: existingAttendance,
     });
   } catch (err: unknown) {
     console.error(err);

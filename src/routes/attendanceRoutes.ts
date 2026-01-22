@@ -1,49 +1,115 @@
 import express from "express";
-import {
-  getAttendance,
-  getUserMonthlyAttendance,
-  getDailyAttendanceByRole,
-  getDailyAttendanceSummary,
-} from "../controllers/attendanceController";
+import { authorize, authorizeAttendanceMarking, authorizeBulkAttendanceMarking, validate } from "../middleware/validate";
+import { deleteAttendanceSchema, getAttendanceSchema, getDailyAttendanceByRoleSchema, getUserMonthlyAttendanceSchema, markAttendanceSchema, markBulkAttendanceSchema, updateAttendanceSchema } from "../validators/attendanceValidators";
+import { deleteAttendance, getAttendance, getDailyAttendanceByRole, getDailyAttendanceSummary, getUserMonthlyAttendance, markAttendance, markBulkAttendance, updateAttendance } from "../controllers/attendanceController";
+
+// import { authenticate } from "../middlewares/authMiddleware"; // Your auth middleware
 
 const attendanceRouter = express.Router();
+
+// Note: Add authenticate middleware to all routes if you have one
+// Example: router.use(authenticate);
 
 /**
  * @route   GET /api/attendance
  * @desc    Get attendance with flexible filters
- * @query   userId, role, date, startDate, endDate, month, year, status
- * @example /api/attendance?userId=123
- * @example /api/attendance?role=teacher&date=2024-01-15
- * @example /api/attendance?userId=123&month=1&year=2024
- * @example /api/attendance?startDate=2024-01-01&endDate=2024-01-31
+ * @access  Admin, Teacher
  */
-attendanceRouter.get("/", getAttendance);
+attendanceRouter.get(
+  "/",
+  // authenticate, // Uncomment when you have auth middleware
+  authorize("admin", "teacher"),
+  validate(getAttendanceSchema),
+  getAttendance
+);
 
 /**
  * @route   GET /api/attendance/user/:userId/monthly
  * @desc    Get user's attendance for current month
- * @params  userId
- * @example /api/attendance/user/123/monthly
+ * @access  Admin, Teacher, User (self)
  */
-attendanceRouter.get("/user/:userId/monthly", getUserMonthlyAttendance);
+attendanceRouter.get(
+  "/user/:userId/monthly",
+  // authenticate,
+  validate(getUserMonthlyAttendanceSchema),
+  getUserMonthlyAttendance
+);
 
 /**
  * @route   GET /api/attendance/daily/:role
  * @desc    Get daily attendance by role
- * @params  role (student | teacher | staff)
- * @query   date (optional, defaults to today)
- * @example /api/attendance/daily/teacher
- * @example /api/attendance/daily/student?date=2024-01-15
+ * @access  Admin, Teacher
  */
-attendanceRouter.get("/daily/:role", getDailyAttendanceByRole);
+attendanceRouter.get(
+  "/daily/:role",
+  // authenticate,
+  authorize("admin", "teacher"),
+  validate(getDailyAttendanceByRoleSchema),
+  getDailyAttendanceByRole
+);
 
 /**
  * @route   GET /api/attendance/daily-summary
- * @desc    Get attendance summary for all roles for a specific date
- * @query   date (optional, defaults to today)
- * @example /api/attendance/daily-summary
- * @example /api/attendance/daily-summary?date=2024-01-15
+ * @desc    Get attendance summary for all roles
+ * @access  Admin
  */
-attendanceRouter.get("/daily-summary", getDailyAttendanceSummary);
+attendanceRouter.get(
+  "/daily-summary",
+  // authenticate,
+  authorize("admin"),
+  getDailyAttendanceSummary
+);
+
+/**
+ * @route   POST /api/attendance/mark
+ * @desc    Mark new attendance
+ * @access  Admin (all roles), Teacher (students only)
+ */
+attendanceRouter.post(
+  "/mark",
+  // authenticate,
+  validate(markAttendanceSchema),
+  authorizeAttendanceMarking,
+  markAttendance
+);
+
+/**
+ * @route   PUT /api/attendance/:id
+ * @desc    Update existing attendance
+ * @access  Admin (all), Teacher (students only)
+ */
+attendanceRouter.put(
+  "/:id",
+  // authenticate,
+  validate(updateAttendanceSchema),
+  authorize("admin", "teacher"),
+  updateAttendance
+);
+
+/**
+ * @route   POST /api/attendance/mark-bulk
+ * @desc    Mark attendance for multiple users
+ * @access  Admin (all roles), Teacher (students only)
+ */
+attendanceRouter.post(
+  "/mark-bulk",
+  // authenticate,
+  validate(markBulkAttendanceSchema),
+  authorizeBulkAttendanceMarking,
+  markBulkAttendance
+);
+
+/**
+ * @route   DELETE /api/attendance/:id
+ * @desc    Delete attendance record
+ * @access  Admin only
+ */
+attendanceRouter.delete(
+  "/:id",
+  // authenticate,
+  authorize("admin"),
+  validate(deleteAttendanceSchema),
+  deleteAttendance
+);
 
 export default attendanceRouter;
