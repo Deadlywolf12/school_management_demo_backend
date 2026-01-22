@@ -1,9 +1,9 @@
 import { db } from "../db";
 import { attendance } from "../db/schema/attendance";
 import { users } from "../db/schema/users";
-import { teachers } from "../db/schema/actorsSchemas/teacher";
-import { students } from "../db/schema/actorsSchemas/students";
-import { staff } from "../db/schema/actorsSchemas/staff";
+import { teachers } from "../db/schema/teacher";
+import { students } from "../db/schema/students";
+import { staff } from "../db/schema/staff";
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { Request, Response } from "express";
 

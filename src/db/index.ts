@@ -5,11 +5,13 @@ import * as dotenv from "dotenv";
 // Import all tables
 import * as users from "./schema/users";
 import * as otps from "./schema/otps";
-import { students } from "./schema/actorsSchemas/students";
-import { parents } from "./schema/actorsSchemas/parents";
-import { student_parents } from "./schema/actorsSchemas/student_parent";
-import { teachers } from "./schema/actorsSchemas/teacher";
-import { staff } from "./schema/actorsSchemas/staff";
+
+import { student_parents } from "./schema/student_parent";
+import { staff } from "./schema/staff";
+import { teachers } from "./schema/teacher";
+import { parents } from "./schema/parents";
+import { students } from "./schema/students";
+
 
 
 dotenv.config({ path: "../.env" });

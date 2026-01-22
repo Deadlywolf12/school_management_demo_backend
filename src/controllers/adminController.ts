@@ -7,7 +7,7 @@ import { teachers } from "../db/schema/actorsSchemas/teacher";
 import { students } from "../db/schema/actorsSchemas/students";
 import { staff } from "../db/schema/actorsSchemas/staff";
 
-import { student_parents } from "../db/schema/actorsSchemas/student_parent";
+import { student_parents } from "../db/schema/student_parent";
 import { parents } from "../db/schema/actorsSchemas/parents";
 
 export type Role = "student" | "teacher" | "staff" | "parent" | "admin"; // Add "parent" to Role type
