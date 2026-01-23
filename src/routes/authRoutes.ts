@@ -1,7 +1,7 @@
 // routes/auth/authRoutes.ts
 import { Router } from "express";
 import { auth } from "../middleware/auth";
-import { signin, signup, changePassword, changeEmail } from "../controllers/authController";
+import { signin, signup, changePassword, changeEmail, toggleUserStatus } from "../controllers/authController";
 
 import { validate } from "../middleware/validate";
 import {changeAvatarSchema, changeEmailSchema, changeNameSchema, changePasswordSchema, loginSchema as signinSchema, signupSchema } from "../validators/authValidators";
@@ -47,5 +47,5 @@ authRouter.post("/change-email",auth ,validate(changeEmailSchema), changeEmail);
 // change avatar
 // authRouter.put("/change-avatar",auth,validate(changeAvatarSchema),changeAvatar);
 
-
+authRouter.patch("/toggle-status/:id", auth, adminAuth, toggleUserStatus);
 export default authRouter;

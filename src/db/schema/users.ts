@@ -13,6 +13,10 @@ export const users = pgTable("users", {
     .notNull()
     .default("student"),
 
+    status: text("status", {
+    enum: ["active", "deactivated"],
+  }).default("active"),
+
   createdAt: timestamp("createdAt").defaultNow(),
   updatedAt: timestamp("updatedAt").defaultNow(),
 });

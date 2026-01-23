@@ -6,12 +6,12 @@ import { eq } from "drizzle-orm";
 
 export const adminAuth = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    // Make sure the user is authenticated first
+   
     if (!req.user) {
       return res.status(401).json({ success: false, msg: "Not authenticated" });
     }
 
-    // Fetch user from DB to get latest role
+   
     const [user] = await db.select().from(users).where(eq(users.id, req.user.id));
     if (!user) {
       return res.status(401).json({ success: false, msg: "User not found" });

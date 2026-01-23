@@ -250,6 +250,9 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
     if (!isPasswordValid) {
       return res.status(400).json({ success: false, msg: "Incorrect password" });
     }
+      if (existingUser.status == "deactivated") {
+      return res.status(400).json({ success: false, msg: "Your account is deactivated, please contact admin for more info" });
+    }
 
     const token = jwt.sign({ id: existingUser.id, email: existingUser.email,role: existingUser.role}, getJwtSecret(), {
       expiresIn: process.env.JWT_EXPIRES_IN || "7d",
@@ -313,6 +316,37 @@ export const changeEmail = async (req: AuthRequest, res: Response) => {
   } catch (err) {
     console.error("ChangeEmail error:", err);
     return res.status(500).json({ success: false, msg: "Internal server error" });
+  }
+};
+
+export const toggleUserStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params; 
+if (!id) {
+      return res.status(400).json({ success: false, msg: "User ID is required" });
+    }
+    const [existingUser] = await db.select().from(users).where(eq(users.id, id));
+    if (!existingUser) {
+      return res.status(400).json({ success: false, msg: "User not found" });
+    }
+
+   
+    const newStatus = existingUser.status === "active" ? "deactivated" : "active";
+
+   
+    await db
+      .update(users)
+      .set({ status: newStatus, updatedAt: new Date() })
+      .where(eq(users.id, id));
+
+    res.json({ 
+      success: true, 
+      msg: `Account successfully ${newStatus}`, 
+      newStatus: newStatus 
+    });
+  } catch (err) {
+    console.error("Toggle error:", err);
+    res.status(500).json({ success: false, msg: "Internal server error" });
   }
 };
 
