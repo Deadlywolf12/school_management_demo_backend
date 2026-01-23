@@ -1,11 +1,25 @@
 import { ZodSchema, ZodError } from "zod";
 import { Request, Response, NextFunction } from "express";
 
+
 export const validate =
   (schema: ZodSchema) =>
   (req: Request, res: Response, next: NextFunction) => {
     try {
-      req.body = schema.parse(req.body);
+      const parsed = schema.parse({
+        body: req.body,
+        params: req.params,
+        query: req.query,
+      }) as {
+        body?: any;
+        params?: any;
+        query?: any;
+      };
+
+      if (parsed.body) req.body = parsed.body;
+      if (parsed.params) req.params = parsed.params;
+      if (parsed.query) req.query = parsed.query;
+
       next();
     } catch (err: any) {
       if (err instanceof ZodError) {
@@ -14,9 +28,10 @@ export const validate =
           errors: err.issues.map((issue) => issue.message),
         });
       }
+
       return res.status(400).json({
         success: false,
-        errors: [err.message || "Invalid request body"],
+        errors: [err.message || "Invalid request"],
       });
     }
   };
