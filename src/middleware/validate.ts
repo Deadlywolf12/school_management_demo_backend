@@ -30,17 +30,25 @@ export const validate =
       }
 
       // Validate all at once
-      const validated = schema.parse(toValidate);
+      const validated = schema.parse(toValidate) as any;
 
       // Assign validated data back to request
       if (validated.body !== undefined) {
         req.body = validated.body;
       }
+      
       if (validated.params !== undefined) {
-        req.params = validated.params as any;
+        // For params, we need to merge the validated data
+        Object.keys(validated.params).forEach((key) => {
+          (req.params as any)[key] = validated.params[key];
+        });
       }
+      
       if (validated.query !== undefined) {
-        req.query = validated.query as any;
+        // For query, we need to merge the validated data
+        Object.keys(validated.query).forEach((key) => {
+          (req.query as any)[key] = validated.query[key];
+        });
       }
 
       next();
@@ -79,14 +87,20 @@ export const validateRequest = (schemas: {
 
       // Validate params if schema provided
       if (schemas.params) {
-        const validated = schemas.params.parse(req.params ?? {});
-        req.params = validated as any;
+        const validated = schemas.params.parse(req.params ?? {}) as any;
+        // Merge validated params back
+        Object.keys(validated).forEach((key) => {
+          (req.params as any)[key] = validated[key];
+        });
       }
 
       // Validate query if schema provided
       if (schemas.query) {
-        const validated = schemas.query.parse(req.query ?? {});
-        req.query = validated as any;
+        const validated = schemas.query.parse(req.query ?? {}) as any;
+        // Merge validated query back
+        Object.keys(validated).forEach((key) => {
+          (req.query as any)[key] = validated[key];
+        });
       }
 
       next();
