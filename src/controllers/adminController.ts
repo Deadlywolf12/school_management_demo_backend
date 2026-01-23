@@ -120,7 +120,7 @@ export const createUser = async (
         if (!teacherDetails) throw new Error("Teacher details required");
 
         await db.insert(teachers).values({
-          userId: userId, // Use camelCase - TypeScript property name
+          userId: userId, 
           employeeId: teacherDetails.employeeId,
           department: teacherDetails.department,
           subject: teacherDetails.subject,

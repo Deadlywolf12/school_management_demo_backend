@@ -211,6 +211,8 @@ export const getUserByIdSchema = z.object({
  * PUT /api/admin/users/:userId
  * Update user details (all fields optional)
  */
+
+
 export const updateUserSchema = z.object({
   params: z.object({
     userId: z.string().uuid("Invalid user ID format"),
