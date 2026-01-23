@@ -3,6 +3,7 @@ import authRouter from "./routes/authRoutes";
 import adminRouter from "./routes/adminRoutes";
 
 import attendanceRouter from "./routes/attendanceRoutes";
+import subjectRouter from "./routes/subjectRoutes";
 
 
 
@@ -12,7 +13,8 @@ app.use(express.json());
 app.use("/api/v1/auth",authRouter);
 app.use("/api/v1/admin",adminRouter);
 // app.use("/api/v1/admin/teacher",teacherRouter);
-app.use("/api/v1",attendanceRouter);
+app.use("/api/v1/attendance",attendanceRouter);
+app.use("/api/v1",subjectRouter);
 
 
 app.get("/",(req,res)=>{
