@@ -1,95 +1,203 @@
 import { z } from "zod";
 
 // Common reusable schemas
-const emailSchema = z.string().email("Invalid email format").transform(e => e.trim().toLowerCase());
-const otpSchema = z.string().regex(/^\d{6}$/, "OTP must be 6 digits");
+const emailSchema = z
+  .string()
+  .email("Invalid email format")
+  .transform((e) => e.trim().toLowerCase());
 
+const passwordSchema = z
+  .string()
+  .min(6, "Password must be at least 6 characters")
+  .transform((p) => p.trim());
 
+const otpSchema = z
+  .string()
+  .regex(/^\d{6}$/, "OTP must be 6 digits");
 
-// Signup
+// Valid roles
+const validRoles = ["student", "parent", "staff", "admin", "teacher"];
 
+const roleSchema = z
+  .string()
+  .transform((r) => r.trim().toLowerCase())
+  .refine((r) => validRoles.includes(r), {
+    message: `Role must be one of: ${validRoles.join(", ")}`,
+  });
 
+// ============================================
+// AUTH SCHEMAS - WRAPPED FOR validate()
+// ============================================
 
-const validRoles = ["student", "parent", "staff", "admin"];
-
+/**
+ * Signup Schema
+ * POST /auth/signup
+ */
 export const signupSchema = z.object({
- 
-  email: z.string().email().transform(e => e.trim().toLowerCase()),
-  password: z.string().min(6).transform(p => p.trim()),
-  role: z
-    .string()
-    .transform(r => r.trim().toLowerCase())
-    .refine(r => validRoles.includes(r), {
-      message: `Role must be one of: ${validRoles.join(", ")}`,
-    }),
+  body: z.object({
+    email: emailSchema,
+    password: passwordSchema,
+    role: roleSchema,
+  }),
 });
 
+/**
+ * Create User Schema (Admin only)
+ * POST /admin/createUsers
+ */
 export const createUsersSchema = z.object({
- 
-  email: z.string().email().transform(e => e.trim().toLowerCase()),
-  password: z.string().min(6).transform(p => p.trim()),
-  role: z
-    .string()
-    .transform(r => r.trim().toLowerCase())
-    .refine(r => validRoles.includes(r), {
-      message: `Role must be one of: ${validRoles.join(", ")}`,
-    }),
+  body: z.object({
+    email: emailSchema,
+    password: passwordSchema,
+    role: roleSchema,
+  }),
 });
 
-// Login
+/**
+ * Login Schema
+ * POST /auth/login
+ */
 export const loginSchema = z.object({
-  email: emailSchema,
-  password: z.string().min(6, "Password required").transform(p => p.trim()),
+  body: z.object({
+    email: emailSchema,
+    password: passwordSchema,
+  }),
 });
 
-// Request OTP
+/**
+ * Request OTP Schema
+ * POST /auth/request-otp
+ */
 export const requestOtpSchema = z.object({
-  email: emailSchema,
+  body: z.object({
+    email: emailSchema,
+  }),
 });
 
-// Resend OTP
+/**
+ * Resend OTP Schema
+ * POST /auth/resend-otp
+ */
 export const resendOtpSchema = z.object({
-  email: emailSchema,
+  body: z.object({
+    email: emailSchema,
+  }),
 });
 
-// changepassword
+/**
+ * Verify OTP Schema
+ * POST /auth/verify-otp
+ */
+export const verifyOtpSchema = z.object({
+  body: z.object({
+    email: emailSchema,
+    otp: otpSchema,
+  }),
+});
+
+/**
+ * Change Password Schema (Authenticated user)
+ * PUT /auth/change-password
+ */
 export const changePasswordSchema = z.object({
- 
-  oldPassword: z.string().min(6, "Password required").transform(p => p.trim()),
-  newPassword:z.string().min(6, "Password required").transform(p => p.trim()),
+  body: z.object({
+    oldPassword: passwordSchema,
+    newPassword: passwordSchema,
+  }),
 });
 
-// changeName
-export const changeNameSchema = z.object({
- 
- newName: z.string().min(2, "Name must be at least 2 characters").transform(n => n.trim()),
-});
-// changeAvatar
-export const changeAvatarSchema = z.object({
- 
- newAvatar: z.string()
-});
-
-
-
-
-// forgotPass
+/**
+ * Forgot Password Schema
+ * POST /auth/forgot-password
+ */
 export const forgotPasswordSchema = z.object({
-  email: emailSchema,
-  newPassword:z.string().min(6, "Password required").transform(p => p.trim()),
-   otp: z.string().length(6, "OTP must be 6 digits"),
+  body: z.object({
+    email: emailSchema,
+    newPassword: passwordSchema,
+    otp: otpSchema,
+  }),
 });
-// forgotPass
+
+/**
+ * Change Name Schema
+ * PUT /user/name
+ */
+export const changeNameSchema = z.object({
+  body: z.object({
+    newName: z
+      .string()
+      .min(2, "Name must be at least 2 characters")
+      .max(100, "Name must be less than 100 characters")
+      .transform((n) => n.trim()),
+  }),
+});
+
+/**
+ * Update Name Schema (Alternative)
+ * PUT /user/profile/name
+ */
 export const updateNameSchema = z.object({
-  name:z.string().min(2, "Name must be at least 2 characters").transform(p => p.trim()),
+  body: z.object({
+    name: z
+      .string()
+      .min(2, "Name must be at least 2 characters")
+      .max(100, "Name must be less than 100 characters")
+      .transform((n) => n.trim()),
+  }),
 });
+
+/**
+ * Change Avatar Schema
+ * PUT /user/avatar
+ */
+export const changeAvatarSchema = z.object({
+  body: z.object({
+    newAvatar: z
+      .string()
+      .url("Avatar must be a valid URL")
+      .or(z.string().startsWith("data:image/", "Avatar must be a valid image URL or data URI")),
+  }),
+});
+
+/**
+ * Update Avatar Schema (Alternative)
+ * PUT /user/profile/avatar
+ */
 export const updateAvatarSchema = z.object({
-  avatar:z.string().min(2, "Avatar should be more than 2 chr").transform(p => p.trim()),
+  body: z.object({
+    avatar: z
+      .string()
+      .url("Avatar must be a valid URL")
+      .or(z.string().startsWith("data:image/", "Avatar must be a valid image URL or data URI")),
+  }),
 });
 
+/**
+ * Change Email Schema
+ * PUT /auth/change-email
+ */
 export const changeEmailSchema = z.object({
-  password: z.string().min(6, "Password required"),
-  newEmail: emailSchema,
-  // otp: z.string().length(6, "OTP must be 6 digits"),
+  body: z.object({
+    password: passwordSchema,
+    newEmail: emailSchema,
+    otp: otpSchema.optional(), // Optional if OTP verification happens separately
+  }),
 });
 
+// ============================================
+// TYPE EXPORTS
+// ============================================
+
+export type SignupInput = z.infer<typeof signupSchema>;
+export type CreateUsersInput = z.infer<typeof createUsersSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type RequestOtpInput = z.infer<typeof requestOtpSchema>;
+export type ResendOtpInput = z.infer<typeof resendOtpSchema>;
+export type VerifyOtpInput = z.infer<typeof verifyOtpSchema>;
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ChangeNameInput = z.infer<typeof changeNameSchema>;
+export type UpdateNameInput = z.infer<typeof updateNameSchema>;
+export type ChangeAvatarInput = z.infer<typeof changeAvatarSchema>;
+export type UpdateAvatarInput = z.infer<typeof updateAvatarSchema>;
+export type ChangeEmailInput = z.infer<typeof changeEmailSchema>;
