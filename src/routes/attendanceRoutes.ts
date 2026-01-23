@@ -2,6 +2,7 @@ import express from "express";
 import { authorize, authorizeAttendanceMarking, authorizeBulkAttendanceMarking, validate } from "../middleware/validate";
 import { deleteAttendanceSchema, getAttendanceSchema, getDailyAttendanceByRoleSchema, getUserMonthlyAttendanceSchema, markAttendanceSchema, markBulkAttendanceSchema, updateAttendanceSchema } from "../validators/attendanceValidators";
 import { deleteAttendance, getAttendance, getDailyAttendanceByRole, getDailyAttendanceSummary, getUserMonthlyAttendance, markAttendance, markBulkAttendance, updateAttendance } from "../controllers/attendanceController";
+import { auth } from "../middleware/auth";
 
 // import { authenticate } from "../middlewares/authMiddleware"; // Your auth middleware
 
@@ -17,7 +18,7 @@ const attendanceRouter = express.Router();
  */
 attendanceRouter.get(
   "/",
-  // authenticate, // Uncomment when you have auth middleware
+  auth,
   authorize("admin", "teacher"),
   validate(getAttendanceSchema),
   getAttendance
@@ -30,7 +31,7 @@ attendanceRouter.get(
  */
 attendanceRouter.get(
   "/user/:userId/monthly",
-  // authenticate,
+ auth,
   validate(getUserMonthlyAttendanceSchema),
   getUserMonthlyAttendance
 );
@@ -42,7 +43,7 @@ attendanceRouter.get(
  */
 attendanceRouter.get(
   "/daily/:role",
-  // authenticate,
+  auth,
   authorize("admin", "teacher"),
   validate(getDailyAttendanceByRoleSchema),
   getDailyAttendanceByRole
@@ -55,7 +56,7 @@ attendanceRouter.get(
  */
 attendanceRouter.get(
   "/daily-summary",
-  // authenticate,
+  auth,
   authorize("admin"),
   getDailyAttendanceSummary
 );
@@ -67,7 +68,7 @@ attendanceRouter.get(
  */
 attendanceRouter.post(
   "/mark",
-  // authenticate,
+   auth,
   validate(markAttendanceSchema),
   authorizeAttendanceMarking,
   markAttendance
@@ -80,7 +81,7 @@ attendanceRouter.post(
  */
 attendanceRouter.put(
   "/:id",
-  // authenticate,
+  auth,
   validate(updateAttendanceSchema),
   authorize("admin", "teacher"),
   updateAttendance
@@ -93,7 +94,7 @@ attendanceRouter.put(
  */
 attendanceRouter.post(
   "/mark-bulk",
-  // authenticate,
+  auth,
   validate(markBulkAttendanceSchema),
   authorizeBulkAttendanceMarking,
   markBulkAttendance
@@ -106,7 +107,7 @@ attendanceRouter.post(
  */
 attendanceRouter.delete(
   "/:id",
-  // authenticate,
+   auth,
   authorize("admin"),
   validate(deleteAttendanceSchema),
   deleteAttendance

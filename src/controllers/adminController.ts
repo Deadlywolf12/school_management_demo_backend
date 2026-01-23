@@ -3,12 +3,12 @@ import { users } from "../db/schema/users";
 import { and, eq, gt } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { Request, Response } from "express";
-import { teachers } from "../db/schema/actorsSchemas/teacher";
-import { students } from "../db/schema/actorsSchemas/students";
-import { staff } from "../db/schema/actorsSchemas/staff";
+import { teachers } from "../db/schema/teacher";
+import { students } from "../db/schema/students";
+import { staff } from "../db/schema/staff";
 
 import { student_parents } from "../db/schema/student_parent";
-import { parents } from "../db/schema/actorsSchemas/parents";
+import { parents } from "../db/schema/parents";
 
 export type Role = "student" | "teacher" | "staff" | "parent" | "admin"; // Add "parent" to Role type
 

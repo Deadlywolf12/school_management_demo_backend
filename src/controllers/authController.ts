@@ -251,7 +251,7 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
       return res.status(400).json({ success: false, msg: "Incorrect password" });
     }
 
-    const token = jwt.sign({ id: existingUser.id, email: existingUser.email }, getJwtSecret(), {
+    const token = jwt.sign({ id: existingUser.id, email: existingUser.email,role: existingUser.role}, getJwtSecret(), {
       expiresIn: process.env.JWT_EXPIRES_IN || "7d",
     } as SignOptions);
 

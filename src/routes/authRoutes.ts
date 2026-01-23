@@ -16,7 +16,7 @@ const authRouter = Router();
 // authRouter.get("/", auth, getProfile);
 
 //signup
-authRouter.post("/signup",auth,validate(signupSchema), signup);
+authRouter.post("/signup",validate(signupSchema), signup);
 
 // authRouter.post("/request-otp", validate(requestOtpSchema), (req, res) =>
 //   reqOtp(req, res,"signup"));
