@@ -6,48 +6,48 @@ import { Request, Response } from "express";
 import { teachers } from "../db/schema/teacher";
 import { students } from "../db/schema/students";
 import { staff } from "../db/schema/staff";
-
+import { subjects } from "../db/schema/subjects";
 import { student_parents } from "../db/schema/student_parent";
 import { parents } from "../db/schema/parents";
 
-export type Role = "student" | "teacher" | "staff" | "parent" | "admin"; // Add "parent" to Role type
+export type Role = "student" | "teacher" | "staff" | "parent" | "admin";
 
 export interface TeacherDetails {
   employeeId: string;
   department: string;
-  subject: string;
-  classTeacher: string; // e.g., "8"
+  subjectId: string;
+  classTeacher: string;
   phoneNumber?: string;
   address?: string;
-  joiningDate?: string; // ISO date string
-  salary?: string; // Changed to string to match schema
-  name?:string;
-    gender?: string;
+  joiningDate?: string;
+  salary?: string;
+  name?: string;
+  gender?: string;
 }
 
 export interface StudentDetails {
   studentId: string;
   class: string;
   enrollmentYear: number;
-  guardianIds?: string[]; // one or more parents
+  guardianIds?: string[];
   emergencyNumber?: string;
   address?: string;
   bloodGroup?: string;
-  dateOfBirth?: string; // ISO date
+  dateOfBirth?: string;
   gender?: string;
-  name?:string;
+  name?: string;
 }
 
 export interface StaffDetails {
   employeeId: string;
   department: string;
-  roleDetails: string; // e.g., "finance", "admin"
+  roleDetails: string;
   phoneNumber?: string;
   address?: string;
   joiningDate?: string;
-  salary?: string; // Changed to string to match schema (was number)
-  name?:string;
-   gender?: string;
+  salary?: string;
+  name?: string;
+  gender?: string;
 }
 
 export interface ParentDetails {
@@ -55,16 +55,14 @@ export interface ParentDetails {
   phoneNumber: string;
   address?: string;
   studentIds?: string[];
-  name?:string;
-    gender?: string;
+  name?: string;
+  gender?: string;
 }
 
 export interface CreateUserBody {
   role: Role;
   email: string;
-  
   password: string;
-
   teacherDetails?: TeacherDetails;
   studentDetails?: StudentDetails;
   staffDetails?: StaffDetails;
@@ -79,13 +77,11 @@ export const createUser = async (
     const {
       role,
       email,
-   
       password,
       teacherDetails,
       studentDetails,
       staffDetails,
       parentDetails,
-      
     } = req.body;
 
     const emailNormalized = email.trim().toLowerCase();
@@ -120,19 +116,19 @@ export const createUser = async (
         if (!teacherDetails) throw new Error("Teacher details required");
 
         await db.insert(teachers).values({
-          userId: userId, 
+          userId: userId,
           employeeId: teacherDetails.employeeId,
           department: teacherDetails.department,
-          subject: teacherDetails.subject,
+          subjectId: teacherDetails.subjectId,
           classTeacherOf: teacherDetails.classTeacher,
           phoneNumber: teacherDetails.phoneNumber ?? "",
           address: teacherDetails.address ?? "",
           joiningDate: teacherDetails.joiningDate
             ? new Date(teacherDetails.joiningDate)
             : new Date(),
-          salary: teacherDetails.salary ?? "0.00", 
-           name: teacherDetails.name ?? "",
-  gender: teacherDetails.gender ?? "Not specified",
+          salary: teacherDetails.salary ?? "0.00",
+          name: teacherDetails.name ?? "",
+          gender: teacherDetails.gender ?? "Not specified",
         });
         break;
 
@@ -151,8 +147,7 @@ export const createUser = async (
             ? new Date(studentDetails.dateOfBirth)
             : new Date(),
           gender: studentDetails.gender ?? "Not specified",
-           name: studentDetails.name ?? '',
-
+          name: studentDetails.name ?? "",
         });
 
         // Insert into join table if guardianIds exist
@@ -180,9 +175,9 @@ export const createUser = async (
           joiningDate: staffDetails.joiningDate
             ? new Date(staffDetails.joiningDate)
             : new Date(),
-          salary: staffDetails.salary ?? "0.00", 
-           name: staffDetails.name ?? '',
-  gender: staffDetails.gender ?? "Not specified",
+          salary: staffDetails.salary ?? "0.00",
+          name: staffDetails.name ?? "",
+          gender: staffDetails.gender ?? "Not specified",
         });
         break;
 
@@ -194,8 +189,8 @@ export const createUser = async (
           guardianName: parentDetails.guardianName,
           phoneNumber: parentDetails.phoneNumber,
           address: parentDetails.address ?? "",
-           name: parentDetails.name ?? '',
-  gender: parentDetails.gender ?? "Not specified",
+          name: parentDetails.name ?? "",
+          gender: parentDetails.gender ?? "Not specified",
         });
 
         // Insert into join table if studentIds exist
@@ -239,14 +234,16 @@ export const createUser = async (
   }
 };
 
-
 interface QueryParams {
   role?: Role;
-  page?: string; 
-  limit?: string; 
+  page?: string;
+  limit?: string;
 }
 
-export const getAllUsers = async (req: Request<{}, {}, {}, QueryParams>, res: Response) => {
+export const getAllUsers = async (
+  req: Request<{}, {}, {}, QueryParams>,
+  res: Response
+) => {
   try {
     const { role, page = "1", limit = "10" } = req.query;
     const pageNumber = parseInt(page, 10) || 1;
@@ -254,14 +251,17 @@ export const getAllUsers = async (req: Request<{}, {}, {}, QueryParams>, res: Re
     const offset = (pageNumber - 1) * pageSize;
 
     if (!role) {
-      return res.status(400).json({ success: false, message: "Role is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Role is required" });
     }
 
     let data;
 
     switch (role) {
       case "teacher":
-        data = await db
+        // ✅ Get teachers with subject name instead of subjectId
+        const teachersData = await db
           .select({
             id: teachers.id,
             name: teachers.name,
@@ -269,7 +269,7 @@ export const getAllUsers = async (req: Request<{}, {}, {}, QueryParams>, res: Re
             gender: teachers.gender,
             employeeId: teachers.employeeId,
             department: teachers.department,
-            subject: teachers.subject,
+            subjectId: teachers.subjectId, // Get subjectId to lookup subject
             classTeacherOf: teachers.classTeacherOf,
             phoneNumber: teachers.phoneNumber,
             address: teachers.address,
@@ -280,6 +280,38 @@ export const getAllUsers = async (req: Request<{}, {}, {}, QueryParams>, res: Re
           .innerJoin(users, eq(teachers.userId, users.id))
           .limit(pageSize)
           .offset(offset);
+
+        // ✅ Fetch subject names for each teacher
+        data = await Promise.all(
+          teachersData.map(async (teacher) => {
+            let subjectName = null;
+
+            if (teacher.subjectId) {
+              const [subject] = await db
+                .select({ name: subjects.name })
+                .from(subjects)
+                .where(eq(subjects.id, teacher.subjectId));
+
+              subjectName = subject?.name || null;
+            }
+
+            // ✅ Return with 'subject' field (not 'subjectId')
+            return {
+              id: teacher.id,
+              name: teacher.name,
+              email: teacher.email,
+              gender: teacher.gender,
+              employeeId: teacher.employeeId,
+              department: teacher.department,
+              subject: subjectName, // ✅ Changed from subjectId to subject name
+              classTeacherOf: teacher.classTeacherOf,
+              phoneNumber: teacher.phoneNumber,
+              address: teacher.address,
+              joiningDate: teacher.joiningDate,
+              salary: teacher.salary,
+            };
+          })
+        );
         break;
 
       case "student":
@@ -331,7 +363,7 @@ export const getAllUsers = async (req: Request<{}, {}, {}, QueryParams>, res: Re
             name: parents.name,
             email: users.email,
             guardianName: parents.guardianName,
-             gender: parents.gender,
+            gender: parents.gender,
             phoneNumber: parents.phoneNumber,
             address: parents.address,
           })
@@ -345,7 +377,6 @@ export const getAllUsers = async (req: Request<{}, {}, {}, QueryParams>, res: Re
         data = await db
           .select({
             id: users.id,
-          
             email: users.email,
             role: users.role,
           })
@@ -356,7 +387,9 @@ export const getAllUsers = async (req: Request<{}, {}, {}, QueryParams>, res: Re
         break;
 
       default:
-        return res.status(400).json({ success: false, message: "Invalid role" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid role" });
     }
 
     return res.status(200).json({

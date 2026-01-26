@@ -1,11 +1,9 @@
 import { db } from "../db";
 import { subjects } from "../db/schema/subjects";
-
 import { teachers } from "../db/schema/teacher";
 import { users } from "../db/schema/users";
 import { eq, and } from "drizzle-orm";
 import { Request, Response } from "express";
-import { teacher_subjects } from "../db/schema/teacherXSubject";
 
 // ============================================
 // CREATE SUBJECT
@@ -72,56 +70,28 @@ export const createSubject = async (
 };
 
 // ============================================
-// GET ALL SUBJECTS
+// GET ALL SUBJECTS (ID AND NAME ONLY)
 // ============================================
 
 /**
- * GET /api/admin/subjects?page=1&limit=10
- * Get all subjects with pagination
+ * GET /api/admin/subjects
+ * Get all subjects with id and name only
  */
-export const getAllSubjects = async (
-  req: Request<{}, {}, {}, { page?: number; limit?: number }>,
-  res: Response
-) => {
+export const getAllSubjects = async (req: Request, res: Response) => {
   try {
-    const page = req.query.page || 1;
-    const limit = req.query.limit || 10;
-    const offset = (page - 1) * limit;
-
-    // Get subjects with teacher count
-    const allSubjects = await db.select().from(subjects);
-
-    // Get subjects for current page
-    const paginatedSubjects = await db
-      .select()
-      .from(subjects)
-      .limit(limit)
-      .offset(offset);
-
-    // For each subject, get teacher count
-    const subjectsWithTeachers = await Promise.all(
-      paginatedSubjects.map(async (subject) => {
-        const teacherList = await db
-          .select({
-            teacherId: teacher_subjects.teacherId,
-          })
-          .from(teacher_subjects)
-          .where(eq(teacher_subjects.subjectId, subject.id));
-
-        return {
-          ...subject,
-          teacherCount: teacherList.length,
-        };
+    // Get all subjects (id and name only)
+    const allSubjects = await db
+      .select({
+        id: subjects.id,
+        name: subjects.name,
       })
-    );
+      .from(subjects);
 
     return res.status(200).json({
       success: true,
-      page,
-      limit,
-      totalSubjects: allSubjects.length,
-      totalPages: Math.ceil(allSubjects.length / limit),
-      data: subjectsWithTeachers,
+      message: "Subjects retrieved successfully",
+      data: allSubjects,
+      total: allSubjects.length,
     });
   } catch (err: unknown) {
     console.error("Error fetching subjects:", err);
@@ -136,10 +106,6 @@ export const getAllSubjects = async (
 // GET SUBJECT BY ID
 // ============================================
 
-/**
- * GET /api/admin/subjects/:subjectId
- * Get single subject with all teachers
- */
 export const getSubjectById = async (
   req: Request<{ subjectId: string }>,
   res: Response
@@ -160,29 +126,10 @@ export const getSubjectById = async (
       });
     }
 
-    // Get all teachers teaching this subject
-    const teacherList = await db
-      .select({
-        id: teachers.id,
-        userId: teachers.userId,
-        name: teachers.name,
-        email: users.email,
-        employeeId: teachers.employeeId,
-        department: teachers.department,
-        phoneNumber: teachers.phoneNumber,
-        assignedAt: teacher_subjects.assignedAt,
-      })
-      .from(teacher_subjects)
-      .innerJoin(teachers, eq(teacher_subjects.teacherId, teachers.id))
-      .innerJoin(users, eq(teachers.userId, users.id))
-      .where(eq(teacher_subjects.subjectId, subjectId));
-
     return res.status(200).json({
       success: true,
       data: {
         ...subject,
-        teachers: teacherList,
-        teacherCount: teacherList.length,
       },
     });
   } catch (err: unknown) {
@@ -335,10 +282,6 @@ export const deleteSubject = async (
 // ASSIGN TEACHER TO SUBJECT
 // ============================================
 
-/**
- * POST /api/admin/subjects/assign-teacher
- * Assign a teacher to a subject
- */
 export const assignTeacherToSubject = async (
   req: Request<{}, {}, { teacherId: string; subjectId: string }>,
   res: Response
@@ -351,6 +294,7 @@ export const assignTeacherToSubject = async (
       .select({
         id: teachers.id,
         name: teachers.name,
+        subjectId: teachers.subjectId,
       })
       .from(teachers)
       .where(eq(teachers.id, teacherId));
@@ -379,31 +323,30 @@ export const assignTeacherToSubject = async (
       });
     }
 
-    // Check if assignment already exists
-    const [existingAssignment] = await db
-      .select()
-      .from(teacher_subjects)
-      .where(
-        and(
-          eq(teacher_subjects.teacherId, teacherId),
-          eq(teacher_subjects.subjectId, subjectId)
-        )
-      );
-
-    if (existingAssignment) {
+    // Check if teacher is already assigned to this subject
+    if (teacher.subjectId === subjectId) {
       return res.status(400).json({
         success: false,
         message: "This teacher is already assigned to this subject",
       });
     }
 
-    // Create assignment
-    await db.insert(teacher_subjects).values({
-      teacherId,
-      subjectId,
-    });
+    // Check if teacher is already assigned to another subject
+    if (teacher.subjectId) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Teacher is already assigned to another subject. Please unassign first.",
+      });
+    }
 
-    return res.status(201).json({
+    // Update teacher's subjectId
+    await db
+      .update(teachers)
+      .set({ subjectId: subjectId })
+      .where(eq(teachers.id, teacherId));
+
+    return res.status(200).json({
       success: true,
       message: "Teacher assigned to subject successfully",
       data: {
@@ -433,7 +376,7 @@ export const assignTeacherToSubject = async (
 
 /**
  * DELETE /api/admin/subjects/remove-teacher
- * Remove a teacher from a subject
+ * Remove a teacher from a subject by setting subjectId to null
  */
 export const removeTeacherFromSubject = async (
   req: Request<{}, {}, { teacherId: string; subjectId: string }>,
@@ -442,33 +385,36 @@ export const removeTeacherFromSubject = async (
   try {
     const { teacherId, subjectId } = req.body;
 
-    // Check if assignment exists
-    const [existingAssignment] = await db
-      .select()
-      .from(teacher_subjects)
-      .where(
-        and(
-          eq(teacher_subjects.teacherId, teacherId),
-          eq(teacher_subjects.subjectId, subjectId)
-        )
-      );
+    // Verify teacher exists
+    const [teacher] = await db
+      .select({
+        id: teachers.id,
+        name: teachers.name,
+        subjectId: teachers.subjectId,
+      })
+      .from(teachers)
+      .where(eq(teachers.id, teacherId));
 
-    if (!existingAssignment) {
+    if (!teacher) {
       return res.status(404).json({
         success: false,
-        message: "Assignment not found between this teacher and subject",
+        message: "Teacher not found",
       });
     }
 
-    // Remove assignment
+    // Check if teacher is assigned to the specified subject
+    if (teacher.subjectId !== subjectId) {
+      return res.status(400).json({
+        success: false,
+        message: "Teacher is not assigned to this subject",
+      });
+    }
+
+    // Remove assignment by setting subjectId to null
     await db
-      .delete(teacher_subjects)
-      .where(
-        and(
-          eq(teacher_subjects.teacherId, teacherId),
-          eq(teacher_subjects.subjectId, subjectId)
-        )
-      );
+      .update(teachers)
+      .set({ subjectId: null })
+      .where(eq(teachers.id, teacherId));
 
     return res.status(200).json({
       success: true,
@@ -511,23 +457,19 @@ export const getSubjectTeachers = async (
       });
     }
 
-    // Get all teachers
+    // Get all teachers assigned to this subject
     const teacherList = await db
       .select({
         id: teachers.id,
         userId: teachers.userId,
         name: teachers.name,
-        email: users.email,
-        gender: teachers.gender,
         employeeId: teachers.employeeId,
         department: teachers.department,
         phoneNumber: teachers.phoneNumber,
-        assignedAt: teacher_subjects.assignedAt,
+        gender: teachers.gender,
       })
-      .from(teacher_subjects)
-      .innerJoin(teachers, eq(teacher_subjects.teacherId, teachers.id))
-      .innerJoin(users, eq(teachers.userId, users.id))
-      .where(eq(teacher_subjects.subjectId, subjectId));
+      .from(teachers)
+      .where(eq(teachers.subjectId, subjectId));
 
     return res.status(200).json({
       success: true,
@@ -551,23 +493,29 @@ export const getSubjectTeachers = async (
 };
 
 // ============================================
-// GET TEACHER'S SUBJECTS
+// GET TEACHER'S SUBJECT
 // ============================================
 
 /**
- * GET /api/admin/teachers/:teacherId/subjects
- * Get all subjects taught by a specific teacher
+ * GET /api/admin/teachers/:teacherId/subject
+ * Get the subject assigned to a specific teacher
  */
-export const getTeacherSubjects = async (
+export const getTeacherSubject = async (
   req: Request<{ teacherId: string }>,
   res: Response
 ) => {
   try {
     const { teacherId } = req.params;
 
-    // Verify teacher exists
+    // Get teacher with subject info
     const [teacher] = await db
-      .select()
+      .select({
+        id: teachers.id,
+        name: teachers.name,
+        employeeId: teachers.employeeId,
+        department: teachers.department,
+        subjectId: teachers.subjectId,
+      })
       .from(teachers)
       .where(eq(teachers.id, teacherId));
 
@@ -578,33 +526,40 @@ export const getTeacherSubjects = async (
       });
     }
 
-    // Get all subjects
-    const subjectList = await db
-      .select({
-        id: subjects.id,
-        name: subjects.name,
-        code: subjects.code,
-        description: subjects.description,
-        assignedAt: teacher_subjects.assignedAt,
-      })
-      .from(teacher_subjects)
-      .innerJoin(subjects, eq(teacher_subjects.subjectId, subjects.id))
-      .where(eq(teacher_subjects.teacherId, teacherId));
+    // If teacher has no subject assigned
+    if (!teacher.subjectId) {
+      return res.status(200).json({
+        success: true,
+        message: "Teacher has no subject assigned",
+        teacher: {
+          id: teacher.id,
+          name: teacher.name,
+          employeeId: teacher.employeeId,
+          department: teacher.department,
+        },
+        subject: null,
+      });
+    }
+
+    // Get subject details
+    const [subject] = await db
+      .select()
+      .from(subjects)
+      .where(eq(subjects.id, teacher.subjectId));
 
     return res.status(200).json({
       success: true,
-      message: "Subjects retrieved successfully",
+      message: "Subject retrieved successfully",
       teacher: {
         id: teacher.id,
         name: teacher.name,
         employeeId: teacher.employeeId,
         department: teacher.department,
       },
-      subjects: subjectList,
-      totalSubjects: subjectList.length,
+      subject: subject || null,
     });
   } catch (err: unknown) {
-    console.error("Error fetching teacher subjects:", err);
+    console.error("Error fetching teacher subject:", err);
     return res.status(500).json({
       success: false,
       message: err instanceof Error ? err.message : "Unknown error",

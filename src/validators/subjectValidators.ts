@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// ============================================
+// CREATE SUBJECT SCHEMA
+// ============================================
 
 export const createSubjectSchema = z.object({
   body: z.object({
@@ -21,6 +24,9 @@ export const createSubjectSchema = z.object({
   }),
 });
 
+// ============================================
+// UPDATE SUBJECT SCHEMA
+// ============================================
 
 export const updateSubjectSchema = z.object({
   params: z.object({
@@ -47,12 +53,19 @@ export const updateSubjectSchema = z.object({
   }),
 });
 
+// ============================================
+// DELETE SUBJECT SCHEMA
+// ============================================
+
 export const deleteSubjectSchema = z.object({
   params: z.object({
     subjectId: z.string().uuid("Invalid subject ID format"),
   }),
 });
 
+// ============================================
+// GET SUBJECT BY ID SCHEMA
+// ============================================
 
 export const getSubjectByIdSchema = z.object({
   params: z.object({
@@ -60,28 +73,21 @@ export const getSubjectByIdSchema = z.object({
   }),
 });
 
+// ============================================
+// GET ALL SUBJECTS SCHEMA (NO PAGINATION)
+// ============================================
 
+/**
+ * GET /api/admin/subjects
+ * Returns all subjects with id and name only (no pagination needed)
+ */
 export const getAllSubjectsSchema = z.object({
-  query: z.object({
-    page: z
-      .string()
-      .optional()
-      .default("1")
-      .transform((val) => parseInt(val))
-      .refine((val) => !isNaN(val) && val > 0, {
-        message: "Page must be a positive number",
-      }),
-    limit: z
-      .string()
-      .optional()
-      .default("10")
-      .transform((val) => parseInt(val))
-      .refine((val) => !isNaN(val) && val > 0 && val <= 100, {
-        message: "Limit must be between 1 and 100",
-      }),
-  }),
+  query: z.object({}).optional(), // No query params needed
 });
 
+// ============================================
+// ASSIGN TEACHER TO SUBJECT SCHEMA
+// ============================================
 
 export const assignTeacherToSubjectSchema = z.object({
   body: z.object({
@@ -90,6 +96,10 @@ export const assignTeacherToSubjectSchema = z.object({
   }),
 });
 
+// ============================================
+// REMOVE TEACHER FROM SUBJECT SCHEMA
+// ============================================
+
 export const removeTeacherFromSubjectSchema = z.object({
   body: z.object({
     teacherId: z.string().uuid("Invalid teacher ID format"),
@@ -97,6 +107,9 @@ export const removeTeacherFromSubjectSchema = z.object({
   }),
 });
 
+// ============================================
+// GET SUBJECT'S TEACHERS SCHEMA
+// ============================================
 
 export const getSubjectTeachersSchema = z.object({
   params: z.object({
@@ -104,19 +117,35 @@ export const getSubjectTeachersSchema = z.object({
   }),
 });
 
-export const getTeacherSubjectsSchema = z.object({
+// ============================================
+// GET TEACHER'S SUBJECT SCHEMA (changed from getTeacherSubjects)
+// ============================================
+
+/**
+ * GET /api/admin/teachers/:teacherId/subject
+ * Note: Changed from "subjects" (plural) to "subject" (singular)
+ * because one teacher can only have ONE subject now
+ */
+export const getTeacherSubjectSchema = z.object({
   params: z.object({
     teacherId: z.string().uuid("Invalid teacher ID format"),
   }),
 });
 
+// ============================================
+// TYPE EXPORTS
+// ============================================
 
 export type CreateSubjectInput = z.infer<typeof createSubjectSchema>;
 export type UpdateSubjectInput = z.infer<typeof updateSubjectSchema>;
 export type DeleteSubjectInput = z.infer<typeof deleteSubjectSchema>;
 export type GetSubjectByIdInput = z.infer<typeof getSubjectByIdSchema>;
 export type GetAllSubjectsInput = z.infer<typeof getAllSubjectsSchema>;
-export type AssignTeacherToSubjectInput = z.infer<typeof assignTeacherToSubjectSchema>;
-export type RemoveTeacherFromSubjectInput = z.infer<typeof removeTeacherFromSubjectSchema>;
+export type AssignTeacherToSubjectInput = z.infer<
+  typeof assignTeacherToSubjectSchema
+>;
+export type RemoveTeacherFromSubjectInput = z.infer<
+  typeof removeTeacherFromSubjectSchema
+>;
 export type GetSubjectTeachersInput = z.infer<typeof getSubjectTeachersSchema>;
-export type GetTeacherSubjectsInput = z.infer<typeof getTeacherSubjectsSchema>;
+export type GetTeacherSubjectInput = z.infer<typeof getTeacherSubjectSchema>;

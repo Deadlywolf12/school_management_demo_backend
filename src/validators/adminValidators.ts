@@ -29,7 +29,7 @@ const teacherDetailsSchema = z.object({
   gender: z.enum(["male", "female"]).optional(),
   employeeId: z.string().min(1, "Employee ID is required"),
   department: z.string().min(1, "Department is required"),
-  subject: z.string().min(1, "Subject is required"),
+  subjectId: z.string().min(1, "Subject is required"),
   classTeacher: z.string().optional(),
   phoneNumber: z.string().min(6, "Phone number must be at least 6 digits"),
   address: z.string().optional(),

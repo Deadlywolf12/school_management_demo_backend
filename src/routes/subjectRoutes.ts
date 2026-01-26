@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { auth } from "../middleware/auth";
 import { adminAuth } from "../middleware/adminAuth";
-import { authorize, validate } from "../middleware/validate";
+import { validate } from "../middleware/validate";
 import {
   createSubjectSchema,
   updateSubjectSchema,
@@ -11,7 +11,7 @@ import {
   assignTeacherToSubjectSchema,
   removeTeacherFromSubjectSchema,
   getSubjectTeachersSchema,
-  getTeacherSubjectsSchema,
+  getTeacherSubjectSchema,
 } from "../validators/subjectValidators";
 import {
   createSubject,
@@ -22,18 +22,32 @@ import {
   assignTeacherToSubject,
   removeTeacherFromSubject,
   getSubjectTeachers,
-  getTeacherSubjects,
+  getTeacherSubject,
 } from "../controllers/subjectController";
 
 const subjectRouter = Router();
 
+// ============================================
 // Apply auth and admin middleware to all routes
+// ============================================
 subjectRouter.use(auth);
 subjectRouter.use(adminAuth);
 
 // ============================================
 // SUBJECT CRUD ROUTES
 // ============================================
+
+/**
+ * @route   GET /api/admin/subjects
+ * @desc    Get all subjects (id and name only, no pagination)
+ * @access  Admin only
+ * @returns { success: boolean, message: string, data: [{ id, name }], total: number }
+ */
+subjectRouter.get(
+  "/subjects",
+  validate(getAllSubjectsSchema),
+  getAllSubjects
+);
 
 /**
  * @route   POST /api/admin/subjects
@@ -43,36 +57,18 @@ subjectRouter.use(adminAuth);
  */
 subjectRouter.post(
   "/subjects",
-  auth,
-   authorize("admin"),
   validate(createSubjectSchema),
   createSubject
 );
 
 /**
- * @route   GET /api/admin/subjects
- * @desc    Get all subjects with pagination
- * @access  Admin only
- * @query   ?page=1&limit=10
- */
-subjectRouter.get(
-  "/subjects",
-  auth,
-   authorize("admin"),
-  validate(getAllSubjectsSchema),
-  getAllSubjects
-);
-
-/**
  * @route   GET /api/admin/subjects/:subjectId
- * @desc    Get single subject with all teachers
+ * @desc    Get single subject by ID with full details
  * @access  Admin only
  * @params  subjectId - Subject's UUID
  */
 subjectRouter.get(
   "/subjects/:subjectId",
-  auth,
-   authorize("admin"),
   validate(getSubjectByIdSchema),
   getSubjectById
 );
@@ -86,22 +82,18 @@ subjectRouter.get(
  */
 subjectRouter.put(
   "/subjects/:subjectId",
-  auth,
-   authorize("admin"),
   validate(updateSubjectSchema),
   updateSubject
 );
 
 /**
  * @route   DELETE /api/admin/subjects/:subjectId
- * @desc    Delete a subject (also removes all teacher assignments)
+ * @desc    Delete a subject (sets all teachers' subjectId to null)
  * @access  Admin only
  * @params  subjectId - Subject's UUID
  */
 subjectRouter.delete(
   "/subjects/:subjectId",
-  auth,
-   authorize("admin"),
   validate(deleteSubjectSchema),
   deleteSubject
 );
@@ -112,58 +104,52 @@ subjectRouter.delete(
 
 /**
  * @route   POST /api/admin/subjects/assign-teacher
- * @desc    Assign a teacher to a subject
+ * @desc    Assign a teacher to a subject (updates teacher's subjectId)
  * @access  Admin only
  * @body    { teacherId: string, subjectId: string }
+ * @note    One teacher can only be assigned to ONE subject at a time
  */
 subjectRouter.post(
   "/subjects/assign-teacher",
-  auth,
-   authorize("admin"),
   validate(assignTeacherToSubjectSchema),
   assignTeacherToSubject
 );
 
 /**
  * @route   DELETE /api/admin/subjects/remove-teacher
- * @desc    Remove a teacher from a subject
+ * @desc    Remove a teacher from a subject (sets teacher's subjectId to null)
  * @access  Admin only
  * @body    { teacherId: string, subjectId: string }
  */
 subjectRouter.delete(
   "/subjects/remove-teacher",
-  auth,
-   authorize("admin"),
   validate(removeTeacherFromSubjectSchema),
   removeTeacherFromSubject
 );
 
 /**
  * @route   GET /api/admin/subjects/:subjectId/teachers
- * @desc    Get all teachers teaching a subject
+ * @desc    Get all teachers teaching a specific subject
  * @access  Admin only
  * @params  subjectId - Subject's UUID
  */
 subjectRouter.get(
   "/subjects/:subjectId/teachers",
-  auth,
-   authorize("admin"),
   validate(getSubjectTeachersSchema),
   getSubjectTeachers
 );
 
 /**
- * @route   GET /api/admin/teachers/:teacherId/subjects
- * @desc    Get all subjects taught by a teacher
+ * @route   GET /api/admin/teachers/:teacherId/subject
+ * @desc    Get the subject assigned to a specific teacher
  * @access  Admin only
  * @params  teacherId - Teacher's UUID
+ * @note    Returns single subject (or null) since one teacher = one subject
  */
 subjectRouter.get(
-  "/teachers/:teacherId/subjects",
-  auth,
-   authorize("admin"),
-  validate(getTeacherSubjectsSchema),
-  getTeacherSubjects
+  "/teachers/:teacherId/subject",
+  validate(getTeacherSubjectSchema),
+  getTeacherSubject
 );
 
 export default subjectRouter;

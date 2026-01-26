@@ -11,6 +11,7 @@ import { staff } from "./schema/staff";
 import { teachers } from "./schema/teacher";
 import { parents } from "./schema/parents";
 import { students } from "./schema/students";
+import { subjects } from "./schema/subjects";
 
 
 
@@ -25,6 +26,7 @@ export const db = drizzle(pool, {
   schema: {
     ...users,
     ...otps,
+    ...subjects,
     ...students,
     ...parents,
     ...student_parents,
