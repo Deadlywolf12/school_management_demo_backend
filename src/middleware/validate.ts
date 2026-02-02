@@ -5,9 +5,15 @@ import { Request, Response, NextFunction } from "express";
  * General validation middleware using Zod.
  * Dynamically validates body, params, and query based on schema keys.
  */
+
+
 export const validate =
   (schema: ZodObject<ZodRawShape>) =>
   (req: Request, res: Response, next: NextFunction) => {
+    console.log("Validating schema for path:", req.path);
+    console.log("Request body:", req.body);
+    console.log("Request params:", req.params);
+    console.log("Schema shape keys:", Object.keys(schema.shape));
     try {
       const toValidate: {
         body?: any;

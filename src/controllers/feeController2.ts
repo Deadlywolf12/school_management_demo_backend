@@ -12,6 +12,7 @@ import { students } from "../db/schema/students";
 import { eq, and, sql } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth";
 import { Interface } from "readline";
+import { classes } from "../db/schema/classes";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -345,12 +346,15 @@ export const payFee = async (
         student: {
           id: students.id,
           name: students.name,
-          studentId: students.studentId,
-          class: students.class,
+          
+          classId: students.classId,
+          classNumber: classes.classNumber,
+          section: classes.section,
         },
       })
       .from(invoices)
       .innerJoin(students, eq(invoices.studentId, students.id))
+      .leftJoin(classes, eq(students.classId, classes.id)) 
       .where(eq(invoices.id, invoiceId));
 
     if (!invoiceData) {
@@ -465,7 +469,7 @@ export const payFee = async (
       await db.insert(paymentHistorySummary).values({
         studentId: invoice.studentId,
         studentName: student.name,
-        studentClass: student.class,
+        studentClass: `${classes.classNumber}-${classes.section}`,
         paymentId: newPayment.id,
         invoiceId: invoice.id,
         amount: amount.toFixed(2),

@@ -101,7 +101,7 @@ export const assignTeacherToSubjectSchema = z.object({
 // ============================================
 
 export const removeTeacherFromSubjectSchema = z.object({
-  body: z.object({
+  params: z.object({  // Change from body to params
     teacherId: z.string().uuid("Invalid teacher ID format"),
     subjectId: z.string().uuid("Invalid subject ID format"),
   }),

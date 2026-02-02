@@ -1,5 +1,5 @@
 import { db } from "../db";
-import { Response } from "express";
+import { Request, Response,request} from "express";
 import {
   invoices,
   feeStructures,
@@ -12,6 +12,7 @@ import {
 import { students } from "../db/schema/students";
 import { eq, and, desc } from "drizzle-orm";
 import { AuthRequest } from "../middleware/auth";
+import { classes } from "../db/schema/classes";
 
 // ============================================
 // HELPER FUNCTIONS
@@ -406,5 +407,82 @@ export const cancelInvoice = async (
     });
   }
 };
+  
+// interface getInvoiceByIdParams{
+//   invoiceId: string;
 
-export {};
+// }
+
+
+export const getInvoiceById = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { invoiceId } = req.params as { invoiceId: string };
+
+    // Get invoice with student details
+  const [invoice] = await db
+  .select({
+    invoice: invoices,
+    student: {
+      id: students.id,
+      name: students.name,
+      classId: students.classId,
+      classNumber: classes.classNumber, 
+      section: classes.section,         
+    },
+  })
+  .from(invoices)
+  .innerJoin(students, eq(invoices.studentId, students.id))
+  .leftJoin(classes, eq(students.classId, classes.id)) 
+  .where(eq(invoices.id, invoiceId));
+
+
+    if (!invoice) {
+      return res.status(404).json({
+        success: false,
+        message: "Invoice not found",
+      });
+    }
+
+    // Get discounts applied
+    const discountsList = await db
+      .select()
+      .from(discounts)
+      .where(eq(discounts.invoiceId, invoiceId))
+      .orderBy(desc(discounts.appliedAt));
+
+    // Get fines applied
+    const finesList = await db
+      .select()
+      .from(fines)
+      .where(eq(fines.invoiceId, invoiceId))
+      .orderBy(desc(fines.appliedAt));
+
+    // Get payment if exists
+    const [payment] = await db
+      .select()
+      .from(payments)
+      .where(eq(payments.invoiceId, invoiceId));
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        ...invoice.invoice,
+        student: invoice.student,
+        discounts: discountsList,
+        fines: finesList,
+        payment: payment || null,
+      },
+    });
+  } catch (err: unknown) {
+    console.error("Error fetching invoice:", err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+};
+
+export {}

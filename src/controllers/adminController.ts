@@ -9,6 +9,7 @@ import { staff } from "../db/schema/staff";
 import { subjects } from "../db/schema/subjects";
 import { student_parents } from "../db/schema/student_parent";
 import { parents } from "../db/schema/parents";
+import { classes } from "../db/schema/classes";
 
 export type Role = "student" | "teacher" | "staff" | "parent" | "admin";
 
@@ -120,7 +121,7 @@ export const createUser = async (
           employeeId: teacherDetails.employeeId,
           department: teacherDetails.department,
           subjectId: teacherDetails.subjectId,
-          classTeacherOf: teacherDetails.classTeacher,
+          classTeacherOfId: teacherDetails.classTeacher,
           phoneNumber: teacherDetails.phoneNumber ?? "",
           address: teacherDetails.address ?? "",
           joiningDate: teacherDetails.joiningDate
@@ -137,8 +138,9 @@ export const createUser = async (
 
         await db.insert(students).values({
           userId: userId,
-          studentId: studentDetails.studentId,
-          class: studentDetails.class,
+          studentRoll: studentDetails.studentId,
+         
+          classId: studentDetails.class,
           enrollmentYear: studentDetails.enrollmentYear,
           emergencyNumber: studentDetails.emergencyNumber ?? "",
           address: studentDetails.address ?? "",
@@ -234,6 +236,78 @@ export const createUser = async (
   }
 };
 
+
+interface QueryParamsForGetAllUsersNameOnly {
+  role?: Role;
+  page?: string;
+  limit?: string;
+}
+
+
+export const getAllUsersByNameOnly = async (req: Request<{}, {}, {}, QueryParamsForGetAllUsersNameOnly>, res: Response) => {
+  try {
+    const { role, page = "1", limit = "10" } = req.query;
+    const pageNumber = parseInt(page, 10) || 1;
+    const pageSize = parseInt(limit, 10) || 10;
+    const offset = (pageNumber - 1) * pageSize;
+
+    if (!role) {
+      return res.status(400).json({ success: false, message: "Role is required" });
+    }
+
+    let data;
+
+    switch (role) {
+      case "teacher":
+        data = await db
+          .select({ id: teachers.id, name: teachers.name })
+          .from(teachers)
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      case "student":
+        data = await db
+          .select({ id: students.id, name: students.name })
+          .from(students)
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      case "parent":
+        data = await db
+          .select({ id: parents.id, name: parents.name })
+          .from(parents)
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      case "staff":
+        data = await db
+          .select({ id: staff.id, name: staff.name })
+          .from(staff)
+          .limit(pageSize)
+          .offset(offset);
+        break;
+
+      default:
+        return res.status(400).json({ success: false, message: "Invalid role" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Retrieved ${data.length} users of role ${role}`,
+      data,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err instanceof Error ? err.message : "Unknown error",
+    });
+  }
+};
+
 interface QueryParams {
   role?: Role;
   page?: string;
@@ -270,7 +344,7 @@ export const getAllUsers = async (
             employeeId: teachers.employeeId,
             department: teachers.department,
             subjectId: teachers.subjectId, // Get subjectId to lookup subject
-            classTeacherOf: teachers.classTeacherOf,
+            classTeacherOf: teachers.classTeacherOfId,
             phoneNumber: teachers.phoneNumber,
             address: teachers.address,
             joiningDate: teachers.joiningDate,
@@ -285,6 +359,7 @@ export const getAllUsers = async (
         data = await Promise.all(
           teachersData.map(async (teacher) => {
             let subjectName = null;
+            let className = null;
 
             if (teacher.subjectId) {
               const [subject] = await db
@@ -293,7 +368,20 @@ export const getAllUsers = async (
                 .where(eq(subjects.id, teacher.subjectId));
 
               subjectName = subject?.name || null;
+
             }
+
+            if (teacher.classTeacherOf) {
+ const [classRecord] = await db
+                .select({ name: classes.classNumber , section: classes.section})
+                .from(classes)
+                .where(eq(classes.id, teacher.classTeacherOf));
+
+              className = classRecord?.name + " " + classRecord?.section || null;
+
+            }
+
+            
 
             // ✅ Return with 'subject' field (not 'subjectId')
             return {
@@ -304,7 +392,7 @@ export const getAllUsers = async (
               employeeId: teacher.employeeId,
               department: teacher.department,
               subject: subjectName, // ✅ Changed from subjectId to subject name
-              classTeacherOf: teacher.classTeacherOf,
+              classTeacherOf: className,
               phoneNumber: teacher.phoneNumber,
               address: teacher.address,
               joiningDate: teacher.joiningDate,
@@ -314,26 +402,32 @@ export const getAllUsers = async (
         );
         break;
 
-      case "student":
-        data = await db
-          .select({
-            id: students.id,
-            name: students.name,
-            email: users.email,
-            gender: students.gender,
-            studentId: students.studentId,
-            class: students.class,
-            enrollmentYear: students.enrollmentYear,
-            emergencyNumber: students.emergencyNumber,
-            address: students.address,
-            bloodGroup: students.bloodGroup,
-            dateOfBirth: students.dateOfBirth,
-          })
-          .from(students)
-          .innerJoin(users, eq(students.userId, users.id))
-          .limit(pageSize)
-          .offset(offset);
-        break;
+    case "student":
+  data = await db
+    .select({
+      id: students.id,
+      name: students.name,
+      studentRoll: students.studentRoll,
+      email: users.email,
+      gender: students.gender,
+
+      classId: students.classId,
+      classNumber: classes.classNumber,   
+      section: classes.section,           
+
+      enrollmentYear: students.enrollmentYear,
+      emergencyNumber: students.emergencyNumber,
+      address: students.address,
+      bloodGroup: students.bloodGroup,
+      dateOfBirth: students.dateOfBirth,
+    })
+    .from(students)
+    .innerJoin(users, eq(students.userId, users.id))
+    .leftJoin(classes, eq(students.classId, classes.id)) 
+    .limit(pageSize)
+    .offset(offset);
+
+  break;
 
       case "staff":
         data = await db

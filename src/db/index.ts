@@ -12,6 +12,10 @@ import { teachers } from "./schema/teacher";
 import { parents } from "./schema/parents";
 import { students } from "./schema/students";
 import { subjects } from "./schema/subjects";
+import { classSubjects, studentGrades } from "./schema/grades";
+import { discounts, feeLedger, feeStructures, fines, invoices, paymentHistorySummary, payments } from "./schema/fee";
+import { classes } from "./schema/classes";
+import { bonusRecords, deductionRecords, salaryAdjustments, salaryRecords } from "./schema/salary";
 
 
 
@@ -32,5 +36,19 @@ export const db = drizzle(pool, {
     ...student_parents,
     ...teachers,
     ...staff,
+    ...classSubjects,
+    ...studentGrades, 
+    ...feeStructures,
+    ...invoices,
+    ...discounts,
+    ...fines,
+    ...payments,
+    ...feeLedger,
+    ...paymentHistorySummary,
+    ...classes,
+    ...salaryAdjustments,
+    ...salaryRecords,
+    ...bonusRecords,
+    ...deductionRecords
   },
 });

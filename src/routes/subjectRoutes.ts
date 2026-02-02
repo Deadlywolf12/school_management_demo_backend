@@ -122,7 +122,7 @@ subjectRouter.post(
  * @body    { teacherId: string, subjectId: string }
  */
 subjectRouter.delete(
-  "/subjects/remove-teacher",
+    "/subjects/remove-teacher/:teacherId/:subjectId",
   validate(removeTeacherFromSubjectSchema),
   removeTeacherFromSubject
 );

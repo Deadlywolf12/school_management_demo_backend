@@ -1,0 +1,1 @@
+ALTER TABLE "teachers" ALTER COLUMN "subject" SET DATA TYPE uuid;

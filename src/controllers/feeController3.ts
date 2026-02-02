@@ -11,6 +11,7 @@ import {
 import { students } from "../db/schema/students";
 import { eq, and, or, sql, desc, asc, gte, lte, between, inArray, count } from "drizzle-orm";
 import { invoiceStatusEnum, feeTypeEnum } from "../db/schema/fee";
+import { classes } from "../db/schema/classes";
 // ============================================
 // 8. GET STUDENT FEE DETAILS
 // ============================================
@@ -85,8 +86,10 @@ export const getStudentFeeDetails = async (
         student: {
           id: student.id,
           name: student.name,
-          studentId: student.studentId,
-          class: student.class,
+         
+          classId: student.classId,
+            classNumber: classes.classNumber, 
+                section: classes.section,
         },
         summary: {
           totalInvoiced: totalInvoiced.toFixed(2),
@@ -162,8 +165,10 @@ export const getFeeHistory = async (
         student: {
           id: student.id,
           name: student.name,
-          studentId: student.studentId,
-          class: student.class,
+        
+          classId: student.classId,
+            classNumber: classes.classNumber, 
+                section: classes.section,
         },
         history: ledgerEntries,
         pagination: {
@@ -295,13 +300,16 @@ export const getPaymentDetails = async (
         student: {
           id: students.id,
           name: students.name,
-          studentId: students.studentId,
-          class: students.class,
+         
+          classId: students.classId,
+            classNumber: classes.classNumber, 
+                section: classes.section,    
         },
       })
       .from(payments)
       .innerJoin(invoices, eq(payments.invoiceId, invoices.id))
       .innerJoin(students, eq(payments.studentId, students.id))
+      .leftJoin(classes, eq(students.classId, classes.id)) 
       .where(eq(payments.id, paymentId));
 
     if (!paymentData) {

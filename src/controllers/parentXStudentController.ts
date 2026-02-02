@@ -19,8 +19,8 @@ export const getStudentParents = async (
       .select({
         id: students.id,
         name: students.name,
-        studentId: students.studentId,
-        class: students.class,
+        
+        classId: students.classId,
       })
       .from(students)
       .where(eq(students.id, studentId));
@@ -55,8 +55,8 @@ export const getStudentParents = async (
       student: {
         id: student.id,
         name: student.name,
-        studentId: student.studentId,
-        class: student.class,
+      
+        classId: student.classId,
       },
       parents: linkedParents,
       totalParents: linkedParents.length,
@@ -103,8 +103,8 @@ export const getParentStudents = async (
         userId: students.userId,
         name: students.name,
         email: users.email,
-        studentId: students.studentId,
-        class: students.class,
+       
+        classId: students.classId,
         gender: students.gender,
         enrollmentYear: students.enrollmentYear,
         emergencyNumber: students.emergencyNumber,

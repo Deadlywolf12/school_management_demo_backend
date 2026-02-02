@@ -379,11 +379,11 @@ export const assignTeacherToSubject = async (
  * Remove a teacher from a subject by setting subjectId to null
  */
 export const removeTeacherFromSubject = async (
-  req: Request<{}, {}, { teacherId: string; subjectId: string }>,
+   req: Request<{ teacherId: string; subjectId: string }>,  
   res: Response
 ) => {
   try {
-    const { teacherId, subjectId } = req.body;
+  const { teacherId, subjectId } = req.params; 
 
     // Verify teacher exists
     const [teacher] = await db

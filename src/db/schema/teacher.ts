@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, timestamp, decimal } from "drizzle-orm/pg-core";
 import { users } from "./users";
 import { subjects } from "./subjects";
+import { classes } from "./classes";
 
 export const teachers = pgTable("teachers", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -8,10 +9,13 @@ export const teachers = pgTable("teachers", {
 
   employeeId: text("employee_id").notNull().unique(),
   department: text("department").notNull(),
-  subjectId: text("subject").references(()=>subjects.id).unique(),
+  subjectId: uuid("subject_id").references(()=>subjects.id),
   name:text("name").notNull().default(""),
   gender: text("gender").default("Not specified"),
-  classTeacherOf: text("class_teacher_of").unique().default(""), // class teacher column
+  classTeacherOfId: uuid("class_teacher_of_id")
+  .references(() => classes.id, { onDelete: "set null" })
+  .unique(),
+  
   phoneNumber: text("phone_number").notNull().unique(),
   address: text("address").notNull().default(""), // new address column
   joiningDate: timestamp("joining_date").notNull().defaultNow(),

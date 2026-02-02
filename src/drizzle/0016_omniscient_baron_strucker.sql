@@ -1,0 +1,1 @@
+ALTER TABLE "student_grades" DROP COLUMN "id";

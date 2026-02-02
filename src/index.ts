@@ -4,6 +4,10 @@ import adminRouter from "./routes/adminRoutes";
 
 import attendanceRouter from "./routes/attendanceRoutes";
 import subjectRouter from "./routes/subjectRoutes";
+import feeRouter from "./routes/feeRoutes";
+import gradeRouter from "./routes/gradingRoutes";
+import classRouter from "./routes/classesRoutes";
+import salaryRouter from "./routes/salaryroutes";
 
 
 
@@ -15,6 +19,10 @@ app.use("/api/v1/admin",adminRouter);
 // app.use("/api/v1/admin/teacher",teacherRouter);
 app.use("/api/v1/attendance",attendanceRouter);
 app.use("/api/v1",subjectRouter);
+app.use("/api/v1/payments",feeRouter);
+app.use("/api/v1/grades",gradeRouter);
+app.use("/api/v1/classes",classRouter);
+app.use("/api/v1/salary",salaryRouter);
 
 
 app.get("/",(req,res)=>{

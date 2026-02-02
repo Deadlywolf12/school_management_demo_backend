@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, integer } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { classes } from "./classes";
 
 export const students = pgTable("students", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -8,8 +9,10 @@ export const students = pgTable("students", {
     .references(() => users.id)
     .unique(), // one-to-one with users table
  name:text("name").notNull().default(""),
-  studentId: text("student_id").notNull().unique(),
-  class: text("class").notNull(),
+  studentRoll: text("student_id").notNull().unique(),
+  classId: uuid("class_id")
+    .notNull()
+    .references(() => classes.id, { onDelete: "restrict" }),
   enrollmentYear: integer("enrollment_year").notNull(),
 
  

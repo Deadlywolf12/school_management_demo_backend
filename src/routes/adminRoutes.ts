@@ -12,6 +12,7 @@ import {
 import { 
   createUser, 
   getAllUsers,
+  getAllUsersByNameOnly,
  
 } from "../controllers/adminController";
 
@@ -43,6 +44,12 @@ adminRouter.get(
   "/users",
   validate(getUsersSchema),
   getAllUsers
+);
+
+adminRouter.get(
+  "/users/namesOnly",
+  validate(getUsersSchema),
+  getAllUsersByNameOnly
 );
 
 /**
