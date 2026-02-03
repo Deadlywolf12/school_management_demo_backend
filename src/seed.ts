@@ -4,7 +4,7 @@
 //   npx tsx db/seed.ts
 //
 // Inserts in FK order:
-//   users → subjects → classes → class_subjects → students → teachers → parents → staff → student_grades
+//   users → subjects → classes → class_subjects → students → teachers → parents → staff → student_grades → examinations
 //
 // Flow:
 //   1. Create users for all roles
@@ -15,6 +15,7 @@
 //   6. Create teachers and assign as class teachers
 //   7. Create parents and staff
 //   8. Seed historical grades
+//   9. Seed examinations, schedules, and results
 // ─────────────────────────────────────────────────────────────────
 
 import { db } from "./db/index"; 
@@ -26,6 +27,8 @@ import { parents } from "./db/schema/parents";
 import { staff } from "./db/schema/staff";
 import { classes } from "./db/schema/classes";
 import { classSubjects, studentGrades } from "./db/schema/grades";
+import { examinations, examSchedules, examResults } from "./db/schema/examination";
+import { eq } from "drizzle-orm";
 
 // ─── Deterministic UUIDs so the seed is repeatable ──────────────
 const USER_IDS = {
@@ -96,6 +99,24 @@ const TEACHER_IDS = {
   teacher3: crypto.randomUUID(),
   teacher4: crypto.randomUUID(),
   teacher5: crypto.randomUUID(),
+};
+
+const EXAMINATION_IDS = {
+  midTerm2024: crypto.randomUUID(),
+  final2024: crypto.randomUUID(),
+  midTerm2023: crypto.randomUUID(),
+};
+
+const EXAM_SCHEDULE_IDS = {
+  // Mid-term 2024 schedules
+  midTerm2024_class3A_math: crypto.randomUUID(),
+  midTerm2024_class3A_english: crypto.randomUUID(),
+  midTerm2024_class4A_math: crypto.randomUUID(),
+  midTerm2024_class4A_science: crypto.randomUUID(),
+  midTerm2024_class5A_math: crypto.randomUUID(),
+  midTerm2024_class5A_english: crypto.randomUUID(),
+  midTerm2024_class6A_physics: crypto.randomUUID(),
+  midTerm2024_class6A_chemistry: crypto.randomUUID(),
 };
 
 // ─────────────────────────────────────────────────────────────────
@@ -548,26 +569,484 @@ async function seed() {
   ]).onConflictDoNothing();
   console.log("    ✓ student_grades");
 
+  // ── 12. EXAMINATIONS ────────────────────────────────────────────
+  console.log("  inserting examinations…");
+  await db.insert(examinations).values([
+    {
+      id: EXAMINATION_IDS.midTerm2024,
+      name: "Mid-Term Examination",
+      type: "mid_term",
+      academicYear: 2024,
+      term: "1st",
+      startDate: "2024-06-01",
+      endDate: "2024-06-15",
+      status: "completed",
+      description: "First mid-term examination for academic year 2024",
+      instructions: "Students must bring their ID cards and arrive 15 minutes early",
+      createdBy: USER_IDS.staff1,
+    },
+    {
+      id: EXAMINATION_IDS.final2024,
+      name: "Final Examination",
+      type: "final",
+      academicYear: 2024,
+      term: "2nd",
+      startDate: "2024-11-15",
+      endDate: "2024-11-30",
+      status: "scheduled",
+      description: "Annual final examination for academic year 2024",
+      instructions: "Final exams - please ensure all syllabus is covered",
+      createdBy: USER_IDS.staff1,
+    },
+    {
+      id: EXAMINATION_IDS.midTerm2023,
+      name: "Mid-Term Examination",
+      type: "mid_term",
+      academicYear: 2023,
+      term: "1st",
+      startDate: "2023-06-01",
+      endDate: "2023-06-15",
+      status: "completed",
+      description: "First mid-term examination for academic year 2023",
+      instructions: "Students must bring their ID cards",
+      createdBy: USER_IDS.staff1,
+    },
+  ]).onConflictDoNothing();
+  console.log("    ✓ examinations");
+
+  // ── 13. EXAM SCHEDULES ──────────────────────────────────────────
+  console.log("  inserting exam schedules…");
+  await db.insert(examSchedules).values([
+    // Class 3A - Math
+    {
+      id: EXAM_SCHEDULE_IDS.midTerm2024_class3A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      classId: CLASS_IDS.class3A,
+      classNumber: 3,
+      subjectId: SUBJECT_IDS.math,
+      subjectName: "Mathematics",
+      date: "2024-06-02",
+      startTime: "09:00",
+      endTime: "11:00",
+      duration: 120,
+      roomNumber: "101",
+      totalMarks: 100,
+      passingMarks: 40,
+      invigilators: [TEACHER_IDS.teacher1, TEACHER_IDS.teacher3],
+      status: "completed",
+      instructions: "Calculators not allowed",
+    },
+    // Class 3A - English
+    {
+      id: EXAM_SCHEDULE_IDS.midTerm2024_class3A_english,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      classId: CLASS_IDS.class3A,
+      classNumber: 3,
+      subjectId: SUBJECT_IDS.english,
+      subjectName: "English",
+      date: "2024-06-04",
+      startTime: "09:00",
+      endTime: "11:00",
+      duration: 120,
+      roomNumber: "101",
+      totalMarks: 100,
+      passingMarks: 40,
+      invigilators: [TEACHER_IDS.teacher2],
+      status: "completed",
+    },
+    // Class 4A - Math
+    {
+      id: EXAM_SCHEDULE_IDS.midTerm2024_class4A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      classId: CLASS_IDS.class4A,
+      classNumber: 4,
+      subjectId: SUBJECT_IDS.math,
+      subjectName: "Mathematics",
+      date: "2024-06-03",
+      startTime: "09:00",
+      endTime: "11:00",
+      duration: 120,
+      roomNumber: "102",
+      totalMarks: 100,
+      passingMarks: 40,
+      invigilators: [TEACHER_IDS.teacher1],
+      status: "completed",
+    },
+    // Class 4A - Science
+    {
+      id: EXAM_SCHEDULE_IDS.midTerm2024_class4A_science,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      classId: CLASS_IDS.class4A,
+      classNumber: 4,
+      subjectId: SUBJECT_IDS.science,
+      subjectName: "Science",
+      date: "2024-06-06",
+      startTime: "09:00",
+      endTime: "11:00",
+      duration: 120,
+      roomNumber: "102",
+      totalMarks: 100,
+      passingMarks: 40,
+      invigilators: [TEACHER_IDS.teacher3],
+      status: "completed",
+    },
+    // Class 5A - Math
+    {
+      id: EXAM_SCHEDULE_IDS.midTerm2024_class5A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      classId: CLASS_IDS.class5A,
+      classNumber: 5,
+      subjectId: SUBJECT_IDS.math,
+      subjectName: "Mathematics",
+      date: "2024-06-05",
+      startTime: "09:00",
+      endTime: "11:30",
+      duration: 150,
+      roomNumber: "103",
+      totalMarks: 100,
+      passingMarks: 40,
+      invigilators: [TEACHER_IDS.teacher1],
+      status: "completed",
+    },
+    // Class 5A - English
+    {
+      id: EXAM_SCHEDULE_IDS.midTerm2024_class5A_english,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      classId: CLASS_IDS.class5A,
+      classNumber: 5,
+      subjectId: SUBJECT_IDS.english,
+      subjectName: "English",
+      date: "2024-06-07",
+      startTime: "09:00",
+      endTime: "11:30",
+      duration: 150,
+      roomNumber: "103",
+      totalMarks: 100,
+      passingMarks: 40,
+      invigilators: [TEACHER_IDS.teacher2],
+      status: "completed",
+    },
+    // Class 6A - Physics
+    {
+      id: EXAM_SCHEDULE_IDS.midTerm2024_class6A_physics,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      classId: CLASS_IDS.class6A,
+      classNumber: 6,
+      subjectId: SUBJECT_IDS.physics,
+      subjectName: "Physics",
+      date: "2024-06-08",
+      startTime: "09:00",
+      endTime: "12:00",
+      duration: 180,
+      roomNumber: "104",
+      totalMarks: 100,
+      passingMarks: 40,
+      invigilators: [TEACHER_IDS.teacher3, TEACHER_IDS.teacher5],
+      status: "completed",
+    },
+    // Class 6A - Chemistry
+    {
+      id: EXAM_SCHEDULE_IDS.midTerm2024_class6A_chemistry,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      classId: CLASS_IDS.class6A,
+      classNumber: 6,
+      subjectId: SUBJECT_IDS.chemistry,
+      subjectName: "Chemistry",
+      date: "2024-06-10",
+      startTime: "09:00",
+      endTime: "12:00",
+      duration: 180,
+      roomNumber: "104",
+      totalMarks: 100,
+      passingMarks: 40,
+      invigilators: [TEACHER_IDS.teacher3],
+      status: "completed",
+    },
+  ]).onConflictDoNothing();
+  console.log("    ✓ exam schedules");
+
+  // ── 14. EXAM RESULTS ────────────────────────────────────────────
+  console.log("  inserting exam results…");
+
+  // Helper to calculate percentage and grade
+  const examResult = (obtained: number, total: number = 100) => {
+    const percentage = ((obtained / total) * 100).toFixed(2);
+    let grade: string;
+    const pct = parseFloat(percentage);
+    if (pct >= 90) grade = "A+";
+    else if (pct >= 80) grade = "A";
+    else if (pct >= 70) grade = "B+";
+    else if (pct >= 60) grade = "B";
+    else if (pct >= 50) grade = "C";
+    else if (pct >= 40) grade = "D";
+    else grade = "F";
+    
+    return {
+      obtainedMarks: obtained,
+      totalMarks: total,
+      percentage,
+      grade,
+      status: obtained >= 40 ? "pass" : "fail",
+    };
+  };
+
+  await db.insert(examResults).values([
+    // Class 3A - Hassan Butt - Math
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class3A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student7,
+      classId: CLASS_IDS.class3A,
+      classNumber: 3,
+      subjectId: SUBJECT_IDS.math,
+      ...examResult(75),
+      markedBy: TEACHER_IDS.teacher1,
+      remarks: "Good performance",
+    },
+    // Class 3A - Hassan Butt - English
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class3A_english,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student7,
+      classId: CLASS_IDS.class3A,
+      classNumber: 3,
+      subjectId: SUBJECT_IDS.english,
+      ...examResult(82),
+      markedBy: TEACHER_IDS.teacher2,
+      remarks: "Excellent work",
+    },
+    // Class 3A - Nadia Raza - Math
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class3A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student8,
+      classId: CLASS_IDS.class3A,
+      classNumber: 3,
+      subjectId: SUBJECT_IDS.math,
+      ...examResult(88),
+      markedBy: TEACHER_IDS.teacher1,
+      remarks: "Outstanding",
+    },
+    // Class 3A - Nadia Raza - English
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class3A_english,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student8,
+      classId: CLASS_IDS.class3A,
+      classNumber: 3,
+      subjectId: SUBJECT_IDS.english,
+      ...examResult(91),
+      markedBy: TEACHER_IDS.teacher2,
+      remarks: "Excellent comprehension",
+    },
+    
+    // Class 4A - Omar Malik - Math
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class4A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student3,
+      classId: CLASS_IDS.class4A,
+      classNumber: 4,
+      subjectId: SUBJECT_IDS.math,
+      ...examResult(79),
+      markedBy: TEACHER_IDS.teacher1,
+    },
+    // Class 4A - Omar Malik - Science
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class4A_science,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student3,
+      classId: CLASS_IDS.class4A,
+      classNumber: 4,
+      subjectId: SUBJECT_IDS.science,
+      ...examResult(85),
+      markedBy: TEACHER_IDS.teacher3,
+    },
+    // Class 4A - Zara Iqbal - Math
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class4A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student4,
+      classId: CLASS_IDS.class4A,
+      classNumber: 4,
+      subjectId: SUBJECT_IDS.math,
+      ...examResult(92),
+      markedBy: TEACHER_IDS.teacher1,
+      remarks: "Excellent problem solving",
+    },
+    // Class 4A - Zara Iqbal - Science
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class4A_science,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student4,
+      classId: CLASS_IDS.class4A,
+      classNumber: 4,
+      subjectId: SUBJECT_IDS.science,
+      ...examResult(89),
+      markedBy: TEACHER_IDS.teacher3,
+    },
+    // Class 4A - Fatima Haq - Math
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class4A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student10,
+      classId: CLASS_IDS.class4A,
+      classNumber: 4,
+      subjectId: SUBJECT_IDS.math,
+      ...examResult(86),
+      markedBy: TEACHER_IDS.teacher1,
+    },
+    // Class 4A - Fatima Haq - Science
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class4A_science,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student10,
+      classId: CLASS_IDS.class4A,
+      classNumber: 4,
+      subjectId: SUBJECT_IDS.science,
+      ...examResult(90),
+      markedBy: TEACHER_IDS.teacher3,
+    },
+    
+    // Class 5A - Ali Khan - Math
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class5A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student1,
+      classId: CLASS_IDS.class5A,
+      classNumber: 5,
+      subjectId: SUBJECT_IDS.math,
+      ...examResult(95),
+      markedBy: TEACHER_IDS.teacher1,
+      remarks: "Top of the class",
+    },
+    // Class 5A - Ali Khan - English
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class5A_english,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student1,
+      classId: CLASS_IDS.class5A,
+      classNumber: 5,
+      subjectId: SUBJECT_IDS.english,
+      ...examResult(88),
+      markedBy: TEACHER_IDS.teacher2,
+    },
+    // Class 5A - Sara Ahmed - Math
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class5A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student2,
+      classId: CLASS_IDS.class5A,
+      classNumber: 5,
+      subjectId: SUBJECT_IDS.math,
+      ...examResult(94),
+      markedBy: TEACHER_IDS.teacher1,
+    },
+    // Class 5A - Sara Ahmed - English
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class5A_english,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student2,
+      classId: CLASS_IDS.class5A,
+      classNumber: 5,
+      subjectId: SUBJECT_IDS.english,
+      ...examResult(98),
+      markedBy: TEACHER_IDS.teacher2,
+      remarks: "Exceptional writing skills",
+    },
+    // Class 5A - Imran Ali - Math
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class5A_math,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student9,
+      classId: CLASS_IDS.class5A,
+      classNumber: 5,
+      subjectId: SUBJECT_IDS.math,
+      ...examResult(72),
+      markedBy: TEACHER_IDS.teacher1,
+    },
+    // Class 5A - Imran Ali - English
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class5A_english,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student9,
+      classId: CLASS_IDS.class5A,
+      classNumber: 5,
+      subjectId: SUBJECT_IDS.english,
+      ...examResult(78),
+      markedBy: TEACHER_IDS.teacher2,
+    },
+    
+    // Class 6A - Yusuf Naqvi - Physics
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class6A_physics,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student5,
+      classId: CLASS_IDS.class6A,
+      classNumber: 6,
+      subjectId: SUBJECT_IDS.physics,
+      ...examResult(83),
+      markedBy: TEACHER_IDS.teacher3,
+    },
+    // Class 6A - Yusuf Naqvi - Chemistry
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class6A_chemistry,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student5,
+      classId: CLASS_IDS.class6A,
+      classNumber: 6,
+      subjectId: SUBJECT_IDS.chemistry,
+      ...examResult(74),
+      markedBy: TEACHER_IDS.teacher3,
+    },
+    // Class 6A - Leila Shah - Physics
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class6A_physics,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student6,
+      classId: CLASS_IDS.class6A,
+      classNumber: 6,
+      subjectId: SUBJECT_IDS.physics,
+      ...examResult(91),
+      markedBy: TEACHER_IDS.teacher3,
+      remarks: "Strong understanding",
+    },
+    // Class 6A - Leila Shah - Chemistry
+    {
+      examScheduleId: EXAM_SCHEDULE_IDS.midTerm2024_class6A_chemistry,
+      examinationId: EXAMINATION_IDS.midTerm2024,
+      studentId: STUDENT_ROW_IDS.student6,
+      classId: CLASS_IDS.class6A,
+      classNumber: 6,
+      subjectId: SUBJECT_IDS.chemistry,
+      ...examResult(87),
+      markedBy: TEACHER_IDS.teacher3,
+    },
+  ]).onConflictDoNothing();
+  console.log("    ✓ exam results");
+
   console.log("\n✅  Seed complete.\n");
   console.log("📊  Summary:");
   console.log(`    • 4 Classes created (3A, 4A, 5A, 6A)`);
   console.log(`    • 10 Students distributed across classes`);
   console.log(`    • 5 Teachers (4 assigned as class teachers)`);
   console.log(`    • 10 Subjects across all grade levels`);
+  console.log(`    • 3 Examinations (2024 mid-term, 2024 final, 2023 mid-term)`);
+  console.log(`    • 8 Exam schedules for mid-term 2024`);
+  console.log(`    • 20 Exam results recorded`);
   console.log(`    • Historical grades for 3 students\n`);
   
   console.log("🔍  Quick-test IDs:");
-  console.log(`    Class 5A      → ${CLASS_IDS.class5A}`);
-  console.log(`    Ali Khan      → ${STUDENT_ROW_IDS.student1}  (3 years of grades)`);
-  console.log(`    Sara Ahmed    → ${STUDENT_ROW_IDS.student2}  (3 years of grades)`);
-  console.log(`    Yusuf Naqvi   → ${STUDENT_ROW_IDS.student5}  (4 years of grades)`);
-  console.log(`    Mr. Khan      → ${TEACHER_IDS.teacher1}  (Class 5A teacher)\n`);
+  console.log(`    Class 5A          → ${CLASS_IDS.class5A}`);
+  console.log(`    Ali Khan          → ${STUDENT_ROW_IDS.student1}  (3 years of grades)`);
+  console.log(`    Sara Ahmed        → ${STUDENT_ROW_IDS.student2}  (3 years of grades)`);
+  console.log(`    Yusuf Naqvi       → ${STUDENT_ROW_IDS.student5}  (4 years of grades)`);
+  console.log(`    Mr. Khan          → ${TEACHER_IDS.teacher1}  (Class 5A teacher)`);
+  console.log(`    Mid-Term 2024     → ${EXAMINATION_IDS.midTerm2024}`);
+  console.log(`    5A Math Schedule  → ${EXAM_SCHEDULE_IDS.midTerm2024_class5A_math}\n`);
 
   process.exit(0);
 }
-
-// Import eq function
-import { eq } from "drizzle-orm";
 
 seed().catch((err) => {
   console.error("\n❌  Seed failed:", err);

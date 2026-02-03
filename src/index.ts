@@ -8,10 +8,14 @@ import feeRouter from "./routes/feeRoutes";
 import gradeRouter from "./routes/gradingRoutes";
 import classRouter from "./routes/classesRoutes";
 import salaryRouter from "./routes/salaryroutes";
+import cors from "cors";
+import examinationRouter from "./routes/examsRoutes";
 
 
 
 const app = express();
+
+app.use(cors());
 
 app.use(express.json());
 app.use("/api/v1/auth",authRouter);
@@ -23,6 +27,7 @@ app.use("/api/v1/payments",feeRouter);
 app.use("/api/v1/grades",gradeRouter);
 app.use("/api/v1/classes",classRouter);
 app.use("/api/v1/salary",salaryRouter);
+app.use("/api/v1/exams",examinationRouter);
 
 
 app.get("/",(req,res)=>{

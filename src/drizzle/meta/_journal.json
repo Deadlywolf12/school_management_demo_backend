@@ -127,6 +127,13 @@
       "when": 1769976019783,
       "tag": "0017_right_fantastic_four",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1770057153629,
+      "tag": "0018_cultured_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

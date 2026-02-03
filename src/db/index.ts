@@ -16,6 +16,7 @@ import { classSubjects, studentGrades } from "./schema/grades";
 import { discounts, feeLedger, feeStructures, fines, invoices, paymentHistorySummary, payments } from "./schema/fee";
 import { classes } from "./schema/classes";
 import { bonusRecords, deductionRecords, salaryAdjustments, salaryRecords } from "./schema/salary";
+import { bulkMarkingSessions, examAttendance, examinations, examResults, examSchedules } from "./schema/examination";
 
 
 
@@ -49,6 +50,11 @@ export const db = drizzle(pool, {
     ...salaryAdjustments,
     ...salaryRecords,
     ...bonusRecords,
-    ...deductionRecords
+    ...deductionRecords,
+    ...examinations,
+    ...examAttendance,
+    ...examResults,
+    ...examSchedules,
+    ...bulkMarkingSessions
   },
 });
