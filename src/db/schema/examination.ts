@@ -1,6 +1,6 @@
 // db/schema/examination.ts
 
-import { pgTable, uuid, varchar, timestamp, integer, text, date } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, timestamp, integer, text, date, unique } from "drizzle-orm/pg-core";
 
 // ─── EXAMINATIONS TABLE ─────────────────────────────────────────
 // Main exam definition (e.g., "Mid-Term 2024", "Final Exam 2024")
@@ -75,37 +75,32 @@ export const examSchedules = pgTable("exam_schedules", {
 
 // ─── EXAM RESULTS TABLE ─────────────────────────────────────────
 // Stores individual student results for each exam schedule
-export const examResults = pgTable("exam_results", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  
-  // References
-  examScheduleId: uuid("exam_schedule_id").notNull().references(() => examSchedules.id, { onDelete: "cascade" }),
-  examinationId: uuid("examination_id").notNull().references(() => examinations.id, { onDelete: "cascade" }),
-  studentId: uuid("student_id").notNull(), // References students table
-  
-  // Denormalized for quick queries
-  classId: uuid("class_id").notNull(),
-  classNumber: integer("class_number").notNull(),
-  subjectId: uuid("subject_id").notNull(),
-  
-  // Marks
-  obtainedMarks: integer("obtained_marks").notNull(),
-  totalMarks: integer("total_marks").notNull(),
-  percentage: varchar("percentage", { length: 10 }).notNull(), // e.g., "85.50"
-  grade: varchar("grade", { length: 5 }).notNull(), // "A+", "A", "B+", etc.
-  status: varchar("status", { length: 20 }).notNull(), // "pass", "fail", "absent"
-  
-  // Marking details
-  markedBy: uuid("marked_by").notNull(), // Teacher ID who marked this
-  markedAt: timestamp("marked_at").notNull().defaultNow(),
-  
-  // Additional info
-  remarks: text("remarks"), // Teacher's remarks
-  
-  // Metadata
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const examResults = pgTable(
+  "exam_results",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    examScheduleId: uuid("exam_schedule_id").notNull().references(() => examSchedules.id, { onDelete: "cascade" }),
+    examinationId: uuid("examination_id").notNull().references(() => examinations.id, { onDelete: "cascade" }),
+    studentId: uuid("student_id").notNull(),
+    classId: uuid("class_id").notNull(),
+    classNumber: integer("class_number").notNull(),
+    subjectId: uuid("subject_id").notNull(),
+    obtainedMarks: integer("obtained_marks").notNull(),
+    totalMarks: integer("total_marks").notNull(),
+    percentage: varchar("percentage", { length: 10 }).notNull(),
+    grade: varchar("grade", { length: 5 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull(),
+    markedBy: uuid("marked_by").notNull(),
+    markedAt: timestamp("marked_at").notNull().defaultNow(),
+    remarks: text("remarks"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueScheduleStudent: unique().on(table.examScheduleId, table.studentId),
+  })
+);
+
 
 // ─── BULK MARKING SESSIONS TABLE ────────────────────────────────
 // Tracks bulk marking operations for audit purposes

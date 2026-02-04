@@ -76,7 +76,7 @@ examinationRouter.post(
 // ─────────────────────────────────────────────
 examinationRouter.post(
   "/mark-bulk",
-  authorize("teacher"),
+  authorize("teacher","admin"),
 
   validate(bulkMarkStudentsSchema),
   bulkMarkStudents

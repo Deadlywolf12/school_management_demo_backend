@@ -14,6 +14,7 @@ import {
   RemoveStudentsFromClassInput,
 } from "../validators/classesValidator";
 import { en } from "zod/v4/locales";
+import { teachers } from "../db/schema/teacher";
 
 // ─── 1. CREATE CLASS ─────────────────────────────────────────────
 export const createClass: RequestHandler = async (req, res) => {
@@ -50,10 +51,22 @@ export const createClass: RequestHandler = async (req, res) => {
 
     // 2. Verify teacher exists (if provided)
     if (classTeacherId) {
-      // Add teacher verification logic here
-      // const teacher = await db.select().from(teachers).where(eq(teachers.id, classTeacherId));
-      // if (!teacher.length) return res.status(404).json({...});
+     
+      const [teacher] = await db.select().from(teachers).where(eq(teachers.id, classTeacherId));
+      if (!teacher) {
+        return res.status(404).json({
+          success: false,
+          message: "Teacher not found",
+        });
+      }
     }
+    
+ if(teachers.classTeacherOfId){
+      return res.status(400).json({
+        success: false,
+        message: "Teacher is already assigned to another class",
+      });
+ }
 
     // 3. Create/Update class_subjects entry
     const existingSubjects = await db
@@ -451,13 +464,16 @@ export const removeStudentsFromClass: RequestHandler = async (req, res) => {
     });
   }
 };
-
 // ─── 8. GET CLASS WITH FULL DETAILS ──────────────────────────────
 export const getClassDetails: RequestHandler = async (req, res) => {
   try {
     const { classId } = req.params;
+    console.log("=== GET CLASS DETAILS START ===");
+    console.log("ClassId received:", classId);
 
-    if(classId === undefined) {
+    // Check if classId exists and is not empty
+    if (!classId) {
+      console.log("ClassId is missing");
       return res.status(400).json({
         success: false,
         message: "Class ID is required",
@@ -465,86 +481,189 @@ export const getClassDetails: RequestHandler = async (req, res) => {
     }
 
     // 1. Get class data
-    const [classData] = await db
+    console.log("Querying class data...");
+    const classResult = await db
       .select()
       .from(classes)
       .where(eq(classes.id, classId))
       .limit(1);
 
+    console.log("Class query result:", classResult);
+    const classData = classResult[0];
+
     if (!classData) {
+      console.log("Class not found");
       return res.status(404).json({
         success: false,
         message: "Class not found",
       });
     }
 
-    // 2. Get subjects
-    let subjectsData: { id: string; name: string; code: string; description: string | null; createdAt: Date; updatedAt: Date; }[] = [];
-    if (classData.classSubjectsId) {
-      const [classSubjectsData] = await db
-        .select()
-        .from(classSubjects)
-        .where(eq(classSubjects.classNumber, classData.classSubjectsId))
-        .limit(1);
+    console.log("Class found:", {
+      id: classData.id,
+      classNumber: classData.classNumber,
+      studentIds: classData.studentIds,
+      classSubjectsId: classData.classSubjectsId,
+      classTeacherId: classData.classTeacherId,
+    });
 
-      if (classSubjectsData && classSubjectsData.subjectsId.length > 0) {
-        // Fetch actual subject details
-        subjectsData = await db
+    // 2. Get subjects data
+    console.log("\n=== FETCHING SUBJECTS ===");
+    let subjectsData: {
+      id: string;
+      name: string;
+      code: string;
+      description: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }[] = [];
+
+    if (classData.classSubjectsId !== null && classData.classSubjectsId !== undefined) {
+      console.log("ClassSubjectsId found:", classData.classSubjectsId);
+      
+      try {
+        const classSubjectsResult = await db
           .select()
-          .from(subjects)
-          .where(inArray(subjects.id, classSubjectsData.subjectsId));
+          .from(classSubjects)
+          .where(eq(classSubjects.classNumber, classData.classSubjectsId));
+
+        console.log("ClassSubjects query result:", classSubjectsResult);
+
+        const classSubjectsData = classSubjectsResult[0];
+
+        if (classSubjectsData) {
+          console.log("ClassSubjects data found:", classSubjectsData);
+          
+          if (classSubjectsData.subjectsId && classSubjectsData.subjectsId.length > 0) {
+            console.log("Subject IDs to fetch:", classSubjectsData.subjectsId);
+            
+            subjectsData = await db
+              .select()
+              .from(subjects)
+              .where(inArray(subjects.id, classSubjectsData.subjectsId));
+            
+            console.log("Subjects fetched:", subjectsData.length, "subjects");
+          } else {
+            console.log("No subject IDs in classSubjects");
+          }
+        } else {
+          console.log("No classSubjects record found");
+        }
+      } catch (subjectError) {
+        console.error("Error fetching subjects:", subjectError);
       }
+    } else {
+      console.log("No classSubjectsId on class");
     }
 
-let studentsData: {
-  id: string;
-  name: string;
-  enrollmentYear: number;
-  emergencyNumber: string;
-  address: string;
-  bloodGroup: string | null;
-  dateOfBirth: Date | null;
-  gender: string | null;
-}[] = [];
-
+    // 3. Get students data
+    console.log("\n=== FETCHING STUDENTS ===");
+    let studentsData: {
+      id: string;
+      name: string;
+      enrollmentYear: number;
+      emergencyNumber: string;
+      address: string;
+      bloodGroup: string | null;
+      dateOfBirth: Date | null;
+      gender: string | null;
+    }[] = [];
 
     if (classData.studentIds && classData.studentIds.length > 0) {
-      studentsData = await db
-        .select({
-          id: students.id,
-          name: students.name,
-          enrollmentYear: students.enrollmentYear,
-          emergencyNumber: students.emergencyNumber,
-          address: students.address,
-          bloodGroup: students.bloodGroup,
-          dateOfBirth: students.dateOfBirth,
-          gender: students.gender,
-         
-        })
-        .from(students)
-        .where(inArray(students.id, classData.studentIds));
+      console.log("Student IDs to fetch:", classData.studentIds);
+      
+      try {
+        studentsData = await db
+          .select({
+            id: students.id,
+            name: students.name,
+            enrollmentYear: students.enrollmentYear,
+            emergencyNumber: students.emergencyNumber,
+            address: students.address,
+            bloodGroup: students.bloodGroup,
+            dateOfBirth: students.dateOfBirth,
+            gender: students.gender,
+          })
+          .from(students)
+          .where(inArray(students.id, classData.studentIds));
+        
+        console.log("Students fetched:", studentsData.length, "students");
+      } catch (studentError) {
+        console.error("Error fetching students:", studentError);
+      }
+    } else {
+      console.log("No student IDs on class");
     }
 
-    // 4. Get teacher info (if you have teachers table)
-    let teacherData = null;
+    // 4. Get teacher info
+    console.log("\n=== FETCHING TEACHER ===");
+    let teacherData: {
+      id: string;
+      employeeId: string;
+      name: string;
+      department: string;
+      phoneNumber: string;
+      gender: string | null;
+      address: string;
+    } | null = null;
+
     if (classData.classTeacherId) {
-      // teacherData = await db.select().from(teachers).where(eq(teachers.id, classData.classTeacherId));
+      console.log("Teacher ID to fetch:", classData.classTeacherId);
+      
+      try {
+        const teacherResult = await db
+          .select({
+            id: teachers.id,
+            employeeId: teachers.employeeId,
+            name: teachers.name,
+            department: teachers.department,
+            phoneNumber: teachers.phoneNumber,
+            gender: teachers.gender,
+            address: teachers.address,
+          })
+          .from(teachers)
+          .where(eq(teachers.id, classData.classTeacherId))
+          .limit(1);
+
+        console.log("Teacher query result:", teacherResult);
+        teacherData = teacherResult[0] ?? null;
+        
+        if (teacherData) {
+          console.log("Teacher found:", teacherData.name);
+        } else {
+          console.log("No teacher found with that ID");
+        }
+      } catch (teacherError) {
+        console.error("Error fetching teacher:", teacherError);
+      }
+    } else {
+      console.log("No classTeacherId on class");
     }
+
+    const responseData = {
+      ...classData,
+      subjects: subjectsData,
+      students: studentsData,
+      teacher: teacherData,
+    };
+
+    console.log("\n=== FINAL RESPONSE ===");
+    console.log("Subjects count:", subjectsData.length);
+    console.log("Students count:", studentsData.length);
+    console.log("Teacher:", teacherData ? "Found" : "Not found");
+    console.log("=== GET CLASS DETAILS END ===\n");
 
     res.status(200).json({
       success: true,
-      data: {
-        ...classData,
-        subjects: subjectsData,
-        students: studentsData,
-        teacher: teacherData,
-      },
+      data: responseData,
     });
   } catch (error) {
+    console.error("=== FATAL ERROR ===");
     console.error("getClassDetails error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch class details",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };

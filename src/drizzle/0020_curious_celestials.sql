@@ -1,0 +1,2 @@
+ALTER TABLE "students" ALTER COLUMN "class_id" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "exam_results" ADD CONSTRAINT "exam_results_exam_schedule_id_student_id_unique" UNIQUE("exam_schedule_id","student_id");
