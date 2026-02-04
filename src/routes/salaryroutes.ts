@@ -78,7 +78,7 @@ salaryRouter.post(
 );
 
 // ─────────────────────────────────────────────
-// [Admin] Adjust employee salary
+// [Admin] Adjust employee salary base salary
 // ─────────────────────────────────────────────
 salaryRouter.post(
   "/adjust",

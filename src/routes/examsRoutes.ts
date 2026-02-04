@@ -3,7 +3,7 @@
 import { Router } from "express";
 import { adminAuth } from "../middleware/adminAuth";
 import { auth } from "../middleware/auth";
-import { validate } from "../middleware/validate";
+import { authorize, validate } from "../middleware/validate";
 
 import {
   createExamination,
@@ -76,7 +76,8 @@ examinationRouter.post(
 // ─────────────────────────────────────────────
 examinationRouter.post(
   "/mark-bulk",
-  auth, // Add specific middleware to check if teacher is class teacher
+  authorize("teacher"),
+
   validate(bulkMarkStudentsSchema),
   bulkMarkStudents
 );

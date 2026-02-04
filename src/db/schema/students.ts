@@ -11,7 +11,7 @@ export const students = pgTable("students", {
  name:text("name").notNull().default(""),
   studentRoll: text("student_id").notNull().unique(),
   classId: uuid("class_id")
-    .notNull()
+    
     .references(() => classes.id, { onDelete: "restrict" }),
   enrollmentYear: integer("enrollment_year").notNull(),
 

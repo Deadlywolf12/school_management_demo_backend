@@ -435,7 +435,7 @@ export const removeStudentsFromClass: RequestHandler = async (req, res) => {
     // 4. Update student records to remove their class
     await db
       .update(students)
-      .set({ classId: "non" })
+      .set({ classId: null })
       .where(inArray(students.id, studentIds));
 
     res.status(200).json({
