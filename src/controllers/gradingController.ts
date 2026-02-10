@@ -5,8 +5,11 @@ import { AddGradeInput, UpdateClassSubjectsInput } from "../validators/gradingVa
 import { calculateGradeSummary } from "../helpers/gradesHelper";
 import { classSubjects, studentGrades } from "../db/schema/grades";
 import { db } from "../db";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { students } from "../db/schema/students";
+// import { subjects } from "../db/schema/subjects";
+import { subjects, subject as Subject } from "../db/schema/subjects";
+
 
 
 
@@ -45,15 +48,13 @@ export const updateClassSubjects: RequestHandler = async (req, res) => {
   }
 };
 
-export const getClassSubjects: RequestHandler = async (req, res) => {
+
+export const getClassSubjects:RequestHandler = async (req, res) => {
   try {
     const classNumber = Number(req.params.classNumber);
 
     if (isNaN(classNumber)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid class number",
-      });
+      return res.status(400).json({ success: false, message: "Invalid class number" });
     }
 
     const [record] = await db
@@ -63,22 +64,27 @@ export const getClassSubjects: RequestHandler = async (req, res) => {
       .limit(1);
 
     if (!record) {
-      return res.status(404).json({
-        success: false,
-        message: `No subjects found for class ${classNumber}`,
-      });
+      return res.status(404).json({ success: false, message: `No subjects found for class ${classNumber}` });
+    }
+
+    let subjectsData: Subject[] = [];
+    if (record.subjectsId && record.subjectsId.length > 0) {
+      subjectsData = await db
+        .select()
+        .from(subjects)
+        .where(inArray(subjects.id, record.subjectsId));
     }
 
     res.status(200).json({
       success: true,
-      data: record,
+      data: {
+        classNumber: record.classNumber,
+        subjects: subjectsData, // full subject info including name
+      },
     });
   } catch (error) {
     console.error("getClassSubjects error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch class subjects",
-    });
+    res.status(500).json({ success: false, message: "Failed to fetch class subjects" });
   }
 };
 
