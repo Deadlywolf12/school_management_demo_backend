@@ -464,14 +464,15 @@ export const removeStudentsFromClass: RequestHandler = async (req, res) => {
     });
   }
 };
-// ─── 8. GET CLASS WITH FULL DETAILS ──────────────────────────────
+
+// ─── 8. GET CLASS WITH FULL DETAILS (CORRECTED) ──────────────────────────────
 export const getClassDetails: RequestHandler = async (req, res) => {
   try {
     const { classId } = req.params;
     console.log("=== GET CLASS DETAILS START ===");
     console.log("ClassId received:", classId);
 
-    // Check if classId exists and is not empty
+    // Validate classId
     if (!classId) {
       console.log("ClassId is missing");
       return res.status(400).json({
@@ -509,48 +510,60 @@ export const getClassDetails: RequestHandler = async (req, res) => {
 
     // 2. Get subjects data
     console.log("\n=== FETCHING SUBJECTS ===");
-    let subjectsData: {
-      id: string;
-      name: string;
-      code: string;
-      description: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-    }[] = [];
+    let subjectsData: any[] = [];
 
     if (classData.classSubjectsId !== null && classData.classSubjectsId !== undefined) {
       console.log("ClassSubjectsId found:", classData.classSubjectsId);
       
       try {
+        // Query using classNumber matching classSubjectsId
         const classSubjectsResult = await db
           .select()
           .from(classSubjects)
-          .where(eq(classSubjects.classNumber, classData.classSubjectsId));
+          .where(eq(classSubjects.classNumber, classData.classSubjectsId))
+          .limit(1);
 
         console.log("ClassSubjects query result:", classSubjectsResult);
 
-        const classSubjectsData = classSubjectsResult[0];
-
-        if (classSubjectsData) {
+        if (classSubjectsResult.length > 0) {
+          const classSubjectsData = classSubjectsResult[0];
           console.log("ClassSubjects data found:", classSubjectsData);
+
+          if(classSubjectsData == null || classSubjectsData == undefined){
+            return res.status(404).json({
+        success: false,
+        message: "Class subjects not found",
+      });
+
+          }
           
           if (classSubjectsData.subjectsId && classSubjectsData.subjectsId.length > 0) {
             console.log("Subject IDs to fetch:", classSubjectsData.subjectsId);
             
+            // Fetch all subjects by IDs
             subjectsData = await db
-              .select()
+              .select({
+                id: subjects.id,
+                name: subjects.name,
+                code: subjects.code,
+                description: subjects.description,
+                createdAt: subjects.createdAt,
+                updatedAt: subjects.updatedAt,
+              })
               .from(subjects)
               .where(inArray(subjects.id, classSubjectsData.subjectsId));
             
             console.log("Subjects fetched:", subjectsData.length, "subjects");
+            console.log("Subject details:", subjectsData);
           } else {
             console.log("No subject IDs in classSubjects");
           }
         } else {
-          console.log("No classSubjects record found");
+          console.log("No classSubjects record found for classNumber:", classData.classSubjectsId);
         }
       } catch (subjectError) {
         console.error("Error fetching subjects:", subjectError);
+        // Don't throw - continue with empty subjects
       }
     } else {
       console.log("No classSubjectsId on class");
@@ -558,16 +571,7 @@ export const getClassDetails: RequestHandler = async (req, res) => {
 
     // 3. Get students data
     console.log("\n=== FETCHING STUDENTS ===");
-    let studentsData: {
-      id: string;
-      name: string;
-      enrollmentYear: number;
-      emergencyNumber: string;
-      address: string;
-      bloodGroup: string | null;
-      dateOfBirth: Date | null;
-      gender: string | null;
-    }[] = [];
+    let studentsData: any[] = [];
 
     if (classData.studentIds && classData.studentIds.length > 0) {
       console.log("Student IDs to fetch:", classData.studentIds);
@@ -577,6 +581,8 @@ export const getClassDetails: RequestHandler = async (req, res) => {
           .select({
             id: students.id,
             name: students.name,
+            studentId: students.studentRoll,
+            classLevel: students.classId,
             enrollmentYear: students.enrollmentYear,
             emergencyNumber: students.emergencyNumber,
             address: students.address,
@@ -588,8 +594,10 @@ export const getClassDetails: RequestHandler = async (req, res) => {
           .where(inArray(students.id, classData.studentIds));
         
         console.log("Students fetched:", studentsData.length, "students");
+        console.log("Student details:", studentsData);
       } catch (studentError) {
         console.error("Error fetching students:", studentError);
+        // Don't throw - continue with empty students
       }
     } else {
       console.log("No student IDs on class");
@@ -597,15 +605,7 @@ export const getClassDetails: RequestHandler = async (req, res) => {
 
     // 4. Get teacher info
     console.log("\n=== FETCHING TEACHER ===");
-    let teacherData: {
-      id: string;
-      employeeId: string;
-      name: string;
-      department: string;
-      phoneNumber: string;
-      gender: string | null;
-      address: string;
-    } | null = null;
+    let teacherData: any = null;
 
     if (classData.classTeacherId) {
       console.log("Teacher ID to fetch:", classData.classTeacherId);
@@ -617,6 +617,7 @@ export const getClassDetails: RequestHandler = async (req, res) => {
             employeeId: teachers.employeeId,
             name: teachers.name,
             department: teachers.department,
+            subject: teachers.subjectId,
             phoneNumber: teachers.phoneNumber,
             gender: teachers.gender,
             address: teachers.address,
@@ -626,20 +627,22 @@ export const getClassDetails: RequestHandler = async (req, res) => {
           .limit(1);
 
         console.log("Teacher query result:", teacherResult);
-        teacherData = teacherResult[0] ?? null;
         
-        if (teacherData) {
+        if (teacherResult.length > 0) {
+          teacherData = teacherResult[0];
           console.log("Teacher found:", teacherData.name);
         } else {
-          console.log("No teacher found with that ID");
+          console.log("No teacher found with ID:", classData.classTeacherId);
         }
       } catch (teacherError) {
         console.error("Error fetching teacher:", teacherError);
+        // Don't throw - continue with null teacher
       }
     } else {
       console.log("No classTeacherId on class");
     }
 
+    // 5. Build final response
     const responseData = {
       ...classData,
       subjects: subjectsData,
@@ -651,19 +654,27 @@ export const getClassDetails: RequestHandler = async (req, res) => {
     console.log("Subjects count:", subjectsData.length);
     console.log("Students count:", studentsData.length);
     console.log("Teacher:", teacherData ? "Found" : "Not found");
+    console.log("Response structure:", {
+      hasSubjects: subjectsData.length > 0,
+      hasStudents: studentsData.length > 0,
+      hasTeacher: teacherData !== null,
+    });
     console.log("=== GET CLASS DETAILS END ===\n");
 
-    res.status(200).json({
+    // CRITICAL: Make sure you're returning responseData, not classData
+    return res.status(200).json({
       success: true,
-      data: responseData,
+      data: responseData,  // ← This must be responseData with all the fetched data
     });
+
   } catch (error) {
     console.error("=== FATAL ERROR ===");
     console.error("getClassDetails error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to fetch class details",
       error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 };
+
