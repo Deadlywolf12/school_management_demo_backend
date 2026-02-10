@@ -8,14 +8,14 @@ import feeRouter from "./routes/feeRoutes";
 import gradeRouter from "./routes/gradingRoutes";
 import classRouter from "./routes/classesRoutes";
 import salaryRouter from "./routes/salaryroutes";
-import cors from "cors";
+
 import examinationRouter from "./routes/examsRoutes";
+import parentStudentRouter from "./routes/parentXStudentsRoutes";
 
 
 
 const app = express();
 
-app.use(cors());
 
 app.use(express.json());
 app.use("/api/v1/auth",authRouter);
@@ -28,6 +28,7 @@ app.use("/api/v1/grades",gradeRouter);
 app.use("/api/v1/classes",classRouter);
 app.use("/api/v1/salary",salaryRouter);
 app.use("/api/v1/exams",examinationRouter);
+app.use("/api/v1/relation",parentStudentRouter);
 
 
 app.get("/",(req,res)=>{
@@ -36,7 +37,7 @@ app.get("/",(req,res)=>{
 
 });
 
-app.listen(8000,()=>{
+app.listen(8000,'0.0.0.0',()=>{
 
     console.log("Started listening to port 8000");
 });
