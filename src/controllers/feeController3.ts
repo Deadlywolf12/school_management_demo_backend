@@ -17,17 +17,31 @@ import { classes } from "../db/schema/classes";
 // ============================================
 
 export const getStudentFeeDetails = async (
-  req: Request<{ studentId: string }, {}, {}, { academicYear?: string; status?: string }>,
+  req: Request<
+    { studentId: string },
+    {},
+    {},
+    { academicYear?: string; status?: string }
+  >,
   res: Response
 ) => {
   try {
     const { studentId } = req.params;
     const { academicYear, status } = req.query;
 
-    // 1. Verify student exists
+    // ─────────────────────────────────────────────
+    // 1️⃣ Fetch student with class details (JOIN)
+    // ─────────────────────────────────────────────
     const [student] = await db
-      .select()
+      .select({
+        id: students.id,
+        name: students.name,
+        classId: students.classId,
+        classNumber: classes.classNumber,
+        section: classes.section,
+      })
       .from(students)
+      .leftJoin(classes, eq(students.classId, classes.id))
       .where(eq(students.id, studentId));
 
     if (!student) {
@@ -37,82 +51,91 @@ export const getStudentFeeDetails = async (
       });
     }
 
-    // 2. Build query conditions
-    let conditions: any[] = [eq(invoices.studentId, studentId)];
+    // ─────────────────────────────────────────────
+    // 2️⃣ Build invoice query conditions
+    // ─────────────────────────────────────────────
+    const conditions = [eq(invoices.studentId, studentId)];
 
     if (academicYear) {
       conditions.push(eq(invoices.academicYear, academicYear));
     }
 
     if (status && status !== "all") {
-         if (
-    status === "pending" ||
-    status === "paid" ||
-    status === "overdue" ||
-    status === "cancelled"
-  ) {
-    conditions.push(eq(invoices.status, status));
-  } else {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid status filter",
-    });
-  }
+      const allowedStatuses = ["pending", "paid", "overdue", "cancelled"];
+
+      if (!allowedStatuses.includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid status filter",
+        });
+      }
+
+      conditions.push(eq(invoices.status, status as any));
     }
 
-    // 3. Get invoices
+    // ─────────────────────────────────────────────
+    // 3️⃣ Fetch invoices
+    // ─────────────────────────────────────────────
     const invoicesList = await db
       .select()
       .from(invoices)
       .where(and(...conditions))
       .orderBy(desc(invoices.createdAt));
 
-    // 4. Calculate summary
+    // ─────────────────────────────────────────────
+    // 4️⃣ Calculate summary
+    // ─────────────────────────────────────────────
     const totalInvoiced = invoicesList.reduce(
-      (sum, inv) => sum + parseFloat(inv.totalAmount),
+      (sum, inv) => sum + Number(inv.totalAmount),
       0
     );
+
     const totalPaid = invoicesList.reduce(
-      (sum, inv) => sum + parseFloat(inv.paidAmount),
+      (sum, inv) => sum + Number(inv.paidAmount),
       0
     );
+
     const totalPending = invoicesList
       .filter((inv) => inv.status === "pending" || inv.status === "overdue")
-      .reduce((sum, inv) => sum + parseFloat(inv.totalAmount), 0);
+      .reduce((sum, inv) => sum + Number(inv.totalAmount) - Number(inv.paidAmount), 0);
 
+    const totalOverdue = invoicesList
+      .filter((inv) => inv.status === "overdue")
+      .reduce((sum, inv) => sum + Number(inv.totalAmount) - Number(inv.paidAmount), 0);
+
+    const collectionRate =
+      totalInvoiced > 0
+        ? ((totalPaid / totalInvoiced) * 100).toFixed(2) + "%"
+        : "0%";
+
+    // ─────────────────────────────────────────────
+    // 5️⃣ Return response
+    // ─────────────────────────────────────────────
     return res.status(200).json({
       success: true,
       data: {
-        student: {
-          id: student.id,
-          name: student.name,
-         
-          classId: student.classId,
-            classNumber: classes.classNumber, 
-                section: classes.section,
-        },
+        student,
         summary: {
           totalInvoiced: totalInvoiced.toFixed(2),
           totalPaid: totalPaid.toFixed(2),
           totalPending: totalPending.toFixed(2),
-          collectionRate:
-            totalInvoiced > 0
-              ? ((totalPaid / totalInvoiced) * 100).toFixed(2) + "%"
-              : "0%",
+          totalOverdue: totalOverdue.toFixed(2),
+          collectionRate,
         },
         invoices: invoicesList,
         totalInvoices: invoicesList.length,
       },
     });
+
   } catch (err: unknown) {
     console.error("Error fetching student fee details:", err);
+
     return res.status(500).json({
       success: false,
       message: err instanceof Error ? err.message : "Unknown error",
     });
   }
 };
-
 // ============================================
 // 9. GET FEE HISTORY (LEDGER)
 // ============================================
