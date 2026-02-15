@@ -338,6 +338,7 @@ export const getAllUsers = async (
         const teachersData = await db
           .select({
             id: teachers.id,
+            userId:teachers.userId,
             name: teachers.name,
             email: users.email,
             gender: teachers.gender,
@@ -386,6 +387,7 @@ export const getAllUsers = async (
             // ✅ Return with 'subject' field (not 'subjectId')
             return {
               id: teacher.id,
+              userId: teacher.userId,
               name: teacher.name,
               email: teacher.email,
               gender: teacher.gender,
@@ -406,6 +408,7 @@ export const getAllUsers = async (
   data = await db
     .select({
       id: students.id,
+      userId: students.userId,
       name: students.name,
       studentRoll: students.studentRoll,
       email: users.email,
@@ -433,6 +436,7 @@ export const getAllUsers = async (
         data = await db
           .select({
             id: staff.id,
+            userId: staff.userId,
             name: staff.name,
             email: users.email,
             gender: staff.gender,
@@ -454,6 +458,7 @@ export const getAllUsers = async (
         data = await db
           .select({
             id: parents.id,
+            userId: parents.userId,
             name: parents.name,
             email: users.email,
             guardianName: parents.guardianName,
@@ -471,6 +476,7 @@ export const getAllUsers = async (
         data = await db
           .select({
             id: users.id,
+            userId: users.id,
             email: users.email,
             role: users.role,
           })
