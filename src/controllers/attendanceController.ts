@@ -410,6 +410,8 @@ export const getDailyAttendanceSummary = async (req: Request, res: Response) => 
     });
   }
 };
+
+
 export const markAttendance = async (req: Request, res: Response) => {
   try {
     const {
@@ -449,25 +451,16 @@ export const markAttendance = async (req: Request, res: Response) => {
       });
     }
 
-    // Check if user exists
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId));
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+    // ✅ REMOVED USER CHECK
+    // No need to check users table since we're using role-specific tables
+    // (teachers, students, staff) which may have different ID structures
 
     // Parse date or use current date
     const attendanceDate = date ? new Date(date) : new Date();
     const startOfDay = new Date(attendanceDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(attendanceDate.setHours(23, 59, 59, 999));
 
-    // Check if attendance already exists
+    // Check if attendance already exists for this date
     const [existingAttendance] = await db
       .select()
       .from(attendance)
@@ -480,7 +473,7 @@ export const markAttendance = async (req: Request, res: Response) => {
       );
 
     if (existingAttendance) {
-      // UPDATE instead of returning error
+      // UPDATE existing attendance
       const updated = await db
         .update(attendance)
         .set({
@@ -494,6 +487,14 @@ export const markAttendance = async (req: Request, res: Response) => {
         .where(eq(attendance.id, existingAttendance.id))
         .returning();
 
+      // Validate update result
+      if (!updated || updated.length === 0 || !updated[0]) {
+        return res.status(500).json({
+          success: false,
+          message: "Failed to update attendance record",
+        });
+      }
+
       return res.status(200).json({
         success: true,
         message: "Attendance updated successfully",
@@ -501,7 +502,7 @@ export const markAttendance = async (req: Request, res: Response) => {
       });
     }
 
-    // CREATE NEW ATTENDANCE RECORD (This was missing!)
+    // CREATE NEW attendance record
     const newAttendance = await db
       .insert(attendance)
       .values({
@@ -516,13 +517,21 @@ export const markAttendance = async (req: Request, res: Response) => {
       })
       .returning();
 
+    // Validate insert result
+    if (!newAttendance || newAttendance.length === 0 || !newAttendance[0]) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to create attendance record",
+      });
+    }
+
     return res.status(201).json({
       success: true,
       message: "Attendance marked successfully",
       data: newAttendance[0],
     });
   } catch (err: unknown) {
-    console.error(err);
+    console.error("Mark attendance error:", err);
     return res.status(500).json({
       success: false,
       message: err instanceof Error ? err.message : "Unknown error",
