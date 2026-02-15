@@ -566,19 +566,20 @@ export const updateAttendance = async (req: Request, res: Response) => {
     if (checkOutTime !== undefined) updateData.checkOutTime = checkOutTime ? new Date(checkOutTime) : null;
     if (markedBy !== undefined) updateData.markedBy = markedBy;
 
-    // Update attendance
-    const updatedAttendance = await db
-      .update(attendance)
-      .set(updateData)
-      .where(eq(attendance.id, id))
-      .returning();
-
-    return res.status(200).json({
-      success: true,
-      message: "Attendance updated successfully",
-      data: updatedAttendance[0],
-    });
-  } catch (err: unknown) {
+    // In attendanceController.ts - markAttendance function
+if (existingAttendance) {
+  // UPDATE instead of error
+  const updated = await db.update(attendance)
+    .set({ status, remarks, checkInTime, checkOutTime, markedBy, updatedAt: new Date() })
+    .where(eq(attendance.id, existingAttendance.id))
+    .returning();
+  
+  return res.status(200).json({
+    success: true,
+    message: "Attendance updated",
+    data: updated[0],
+  });
+}} catch (err: unknown) {
     console.error(err);
     return res.status(500).json({
       success: false,
