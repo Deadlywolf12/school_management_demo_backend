@@ -23,7 +23,7 @@ export const attendance = pgTable("attendance", {
 
   userId: uuid("user_id")
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }), // links to users table with cascade delete
+    ,
 
   role: roleEnum("role").notNull(), // enum: student | teacher | staff | admin | parent
   date: timestamp("date").notNull().defaultNow(), // attendance date
@@ -33,7 +33,7 @@ export const attendance = pgTable("attendance", {
   // Additional useful columns
   checkInTime: timestamp("check_in_time"), // when they checked in
   checkOutTime: timestamp("check_out_time"), // when they checked out
-  markedBy: uuid("marked_by").references(() => users.id), // who marked the attendance (admin/teacher)
+  markedBy: uuid("marked_by"),
 
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
