@@ -461,48 +461,39 @@ export const markAttendance = async (req: Request, res: Response) => {
     const attendanceDate = date ? new Date(date) : new Date();
     const startOfDay = new Date(attendanceDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(attendanceDate.setHours(23, 59, 59, 999));
+const [existingAttendance] = await db
+  .select()
+  .from(attendance)
+  .where(
+    and(
+      eq(attendance.userId, userId),
+      gte(attendance.date, startOfDay),
+      lte(attendance.date, endOfDay)
+    )
+  );
 
-    // Check if attendance already exists for this user on this date
-    const [existingAttendance] = await db
-      .select()
-      .from(attendance)
-      .where(
-        and(
-          eq(attendance.userId, userId),
-          gte(attendance.date, startOfDay),
-          lte(attendance.date, endOfDay)
-        )
-      );
+if (existingAttendance) {
+  // UPDATE instead of returning error
+  const updated = await db
+    .update(attendance)
+    .set({
+      status,
+      remarks: remarks || existingAttendance.remarks,
+      checkInTime: checkInTime ? new Date(checkInTime) : existingAttendance.checkInTime,
+      checkOutTime: checkOutTime ? new Date(checkOutTime) : existingAttendance.checkOutTime,
+      markedBy: markedBy || existingAttendance.markedBy,
+      updatedAt: new Date(),
+    })
+    .where(eq(attendance.id, existingAttendance.id))
+    .returning();
 
-    if (existingAttendance) {
-      return res.status(400).json({
-        success: false,
-        message: "Attendance already marked for this date. Use update endpoint to modify.",
-        existingAttendance,
-      });
-    }
-
-    // Create new attendance record
-    const newAttendance = await db
-      .insert(attendance)
-      .values({
-        userId,
-        role,
-        date: attendanceDate,
-        status,
-        remarks: remarks || "",
-        checkInTime: checkInTime ? new Date(checkInTime) : null,
-        checkOutTime: checkOutTime ? new Date(checkOutTime) : null,
-        markedBy: markedBy || null,
-      })
-      .returning();
-
-    return res.status(201).json({
-      success: true,
-      message: "Attendance marked successfully",
-      data: newAttendance[0],
-    });
-  } catch (err: unknown) {
+  return res.status(200).json({
+    success: true,
+    message: "Attendance updated successfully",
+    data: updated[0],
+  });
+}
+} catch (err: unknown) {
     console.error(err);
     return res.status(500).json({
       success: false,
