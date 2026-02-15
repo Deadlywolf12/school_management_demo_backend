@@ -29,6 +29,7 @@ import { classes } from "./db/schema/classes";
 import { classSubjects, studentGrades } from "./db/schema/grades";
 import { examinations, examSchedules, examResults } from "./db/schema/examination";
 import { eq } from "drizzle-orm";
+import { feeStructures } from "./db/schema/fee";
 
 // ─── Deterministic UUIDs so the seed is repeatable ──────────────
 const USER_IDS = {
@@ -118,6 +119,15 @@ const EXAM_SCHEDULE_IDS = {
   midTerm2024_class6A_physics: crypto.randomUUID(),
   midTerm2024_class6A_chemistry: crypto.randomUUID(),
 };
+
+const FEE_STRUCTURE_IDS = {
+  class3Monthly: crypto.randomUUID(),
+  class4Monthly: crypto.randomUUID(),
+  class5Monthly: crypto.randomUUID(),
+  class6Monthly: crypto.randomUUID(),
+  annualGeneral: crypto.randomUUID(),
+};
+
 
 // ─────────────────────────────────────────────────────────────────
 async function seed() {
@@ -1024,6 +1034,65 @@ async function seed() {
     },
   ]).onConflictDoNothing();
   console.log("    ✓ exam results");
+
+    // ── 15. FEE STRUCTURES ─────────────────────────────────────────
+  console.log("  inserting fee structures…");
+
+  await db.insert(feeStructures).values([
+    {
+      id: FEE_STRUCTURE_IDS.class3Monthly,
+      name: "Class 3 Monthly Fee",
+      description: "Monthly tuition fee for Class 3 - Section A",
+      feeType: "monthly",
+      baseAmount: "3500.00",
+      classLevel: "3-A",
+      academicYear: "2024-2025",
+      isActive: true,
+    },
+    {
+      id: FEE_STRUCTURE_IDS.class4Monthly,
+      name: "Class 4 Monthly Fee",
+      description: "Monthly tuition fee for Class 4 - Section A",
+      feeType: "monthly",
+      baseAmount: "4000.00",
+      classLevel: "4-A",
+      academicYear: "2024-2025",
+      isActive: true,
+    },
+    {
+      id: FEE_STRUCTURE_IDS.class5Monthly,
+      name: "Class 5 Monthly Fee",
+      description: "Monthly tuition fee for Class 5 - Section A",
+      feeType: "monthly",
+      baseAmount: "4500.00",
+      classLevel: "5-A",
+      academicYear: "2024-2025",
+      isActive: true,
+    },
+    {
+      id: FEE_STRUCTURE_IDS.class6Monthly,
+      name: "Class 6 Monthly Fee",
+      description: "Monthly tuition fee for Class 6 - Section A",
+      feeType: "monthly",
+      baseAmount: "5000.00",
+      classLevel: "6-A",
+      academicYear: "2024-2025",
+      isActive: true,
+    },
+    {
+      id: FEE_STRUCTURE_IDS.annualGeneral,
+      name: "Annual Admission & Development Fee",
+      description: "Annual development and admission charges for all classes",
+      feeType: "annual",
+      baseAmount: "12000.00",
+      classLevel: null, // applies to all classes
+      academicYear: "2024-2025",
+      isActive: true,
+    },
+  ]).onConflictDoNothing();
+
+  console.log("    ✓ fee structures");
+
 
   console.log("\n✅  Seed complete.\n");
   console.log("📊  Summary:");
