@@ -412,6 +412,7 @@ export const getDailyAttendanceSummary = async (req: Request, res: Response) => 
 };
 
 
+
 export const markAttendance = async (req: Request, res: Response) => {
   try {
     const {
@@ -451,9 +452,18 @@ export const markAttendance = async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ REMOVED USER CHECK
-    // No need to check users table since we're using role-specific tables
-    // (teachers, students, staff) which may have different ID structures
+    // Check if user exists
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId));
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
     // Parse date or use current date
     const attendanceDate = date ? new Date(date) : new Date();
@@ -538,7 +548,6 @@ export const markAttendance = async (req: Request, res: Response) => {
     });
   }
 };
-
 export const updateAttendance = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
