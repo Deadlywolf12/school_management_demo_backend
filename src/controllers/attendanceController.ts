@@ -176,11 +176,10 @@ export const getAttendance = async (req: Request, res: Response) => {
     });
   }
 };
-
-// Get attendance for a specific user for current month
 export const getUserMonthlyAttendance = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    const { month, year } = req.query;
 
     // Validate userId exists
     if (!userId) {
@@ -190,17 +189,25 @@ export const getUserMonthlyAttendance = async (req: Request, res: Response) => {
       });
     }
 
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(
-      now.getFullYear(),
-      now.getMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999
-    );
+    // Authorization: Users can only view their own, admin/teacher can view all
+    const currentUser = (req as any).user;
+    const isAdmin = currentUser.role === "admin";
+    const isTeacher = currentUser.role === "teacher";
+    const isSelf = currentUser.id === userId;
+
+    if (!isAdmin && !isTeacher && !isSelf) {
+      return res.status(403).json({
+        success: false,
+        message: "You don't have permission to view this attendance",
+      });
+    }
+
+    // Use provided month/year or default to current
+    const targetMonth = month ? parseInt(month as string) - 1 : new Date().getMonth();
+    const targetYear = year ? parseInt(year as string) : new Date().getFullYear();
+
+    const startOfMonth = new Date(targetYear, targetMonth, 1);
+    const endOfMonth = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
 
     const attendanceRecords = await db
       .select()
@@ -234,8 +241,8 @@ export const getUserMonthlyAttendance = async (req: Request, res: Response) => {
       success: true,
       data: attendanceRecords,
       stats,
-      month: now.getMonth() + 1,
-      year: now.getFullYear(),
+      month: targetMonth + 1,
+      year: targetYear,
     });
   } catch (err: unknown) {
     console.error(err);
@@ -403,8 +410,6 @@ export const getDailyAttendanceSummary = async (req: Request, res: Response) => 
     });
   }
 };
-
-// Mark new attendance (by admin)
 export const markAttendance = async (req: Request, res: Response) => {
   try {
     const {
@@ -461,39 +466,62 @@ export const markAttendance = async (req: Request, res: Response) => {
     const attendanceDate = date ? new Date(date) : new Date();
     const startOfDay = new Date(attendanceDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(attendanceDate.setHours(23, 59, 59, 999));
-const [existingAttendance] = await db
-  .select()
-  .from(attendance)
-  .where(
-    and(
-      eq(attendance.userId, userId),
-      gte(attendance.date, startOfDay),
-      lte(attendance.date, endOfDay)
-    )
-  );
 
-if (existingAttendance) {
-  // UPDATE instead of returning error
-  const updated = await db
-    .update(attendance)
-    .set({
-      status,
-      remarks: remarks || existingAttendance.remarks,
-      checkInTime: checkInTime ? new Date(checkInTime) : existingAttendance.checkInTime,
-      checkOutTime: checkOutTime ? new Date(checkOutTime) : existingAttendance.checkOutTime,
-      markedBy: markedBy || existingAttendance.markedBy,
-      updatedAt: new Date(),
-    })
-    .where(eq(attendance.id, existingAttendance.id))
-    .returning();
+    // Check if attendance already exists
+    const [existingAttendance] = await db
+      .select()
+      .from(attendance)
+      .where(
+        and(
+          eq(attendance.userId, userId),
+          gte(attendance.date, startOfDay),
+          lte(attendance.date, endOfDay)
+        )
+      );
 
-  return res.status(200).json({
-    success: true,
-    message: "Attendance updated successfully",
-    data: updated[0],
-  });
-}
-} catch (err: unknown) {
+    if (existingAttendance) {
+      // UPDATE instead of returning error
+      const updated = await db
+        .update(attendance)
+        .set({
+          status,
+          remarks: remarks || existingAttendance.remarks,
+          checkInTime: checkInTime ? new Date(checkInTime) : existingAttendance.checkInTime,
+          checkOutTime: checkOutTime ? new Date(checkOutTime) : existingAttendance.checkOutTime,
+          markedBy: markedBy || existingAttendance.markedBy,
+          updatedAt: new Date(),
+        })
+        .where(eq(attendance.id, existingAttendance.id))
+        .returning();
+
+      return res.status(200).json({
+        success: true,
+        message: "Attendance updated successfully",
+        data: updated[0],
+      });
+    }
+
+    // CREATE NEW ATTENDANCE RECORD (This was missing!)
+    const newAttendance = await db
+      .insert(attendance)
+      .values({
+        userId,
+        role,
+        date: attendanceDate,
+        status,
+        remarks: remarks || "",
+        checkInTime: checkInTime ? new Date(checkInTime) : null,
+        checkOutTime: checkOutTime ? new Date(checkOutTime) : null,
+        markedBy: markedBy || null,
+      })
+      .returning();
+
+    return res.status(201).json({
+      success: true,
+      message: "Attendance marked successfully",
+      data: newAttendance[0],
+    });
+  } catch (err: unknown) {
     console.error(err);
     return res.status(500).json({
       success: false,
@@ -502,7 +530,6 @@ if (existingAttendance) {
   }
 };
 
-// Update existing attendance (by admin)
 export const updateAttendance = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -557,20 +584,19 @@ export const updateAttendance = async (req: Request, res: Response) => {
     if (checkOutTime !== undefined) updateData.checkOutTime = checkOutTime ? new Date(checkOutTime) : null;
     if (markedBy !== undefined) updateData.markedBy = markedBy;
 
-    // In attendanceController.ts - markAttendance function
-if (existingAttendance) {
-  // UPDATE instead of error
-  const updated = await db.update(attendance)
-    .set({ status, remarks, checkInTime, checkOutTime, markedBy, updatedAt: new Date() })
-    .where(eq(attendance.id, existingAttendance.id))
-    .returning();
-  
-  return res.status(200).json({
-    success: true,
-    message: "Attendance updated",
-    data: updated[0],
-  });
-}} catch (err: unknown) {
+    // EXECUTE THE UPDATE (This was missing!)
+    const updated = await db
+      .update(attendance)
+      .set(updateData)
+      .where(eq(attendance.id, id))
+      .returning();
+
+    return res.status(200).json({
+      success: true,
+      message: "Attendance updated successfully",
+      data: updated[0],
+    });
+  } catch (err: unknown) {
     console.error(err);
     return res.status(500).json({
       success: false,
@@ -579,21 +605,21 @@ if (existingAttendance) {
   }
 };
 
-// Mark bulk attendance (multiple users at once)
 export const markBulkAttendance = async (req: Request, res: Response) => {
   try {
-    const { attendanceList, markedBy } = req.body;
+    // Accept both 'records' and 'attendanceList' for flexibility
+    const { records, attendanceList, markedBy } = req.body;
+    const listToProcess = records || attendanceList;
 
-    // Validate input
-    if (!attendanceList || !Array.isArray(attendanceList) || attendanceList.length === 0) {
+    if (!listToProcess || !Array.isArray(listToProcess) || listToProcess.length === 0) {
       return res.status(400).json({
         success: false,
-        message: "attendanceList must be a non-empty array",
+        message: "Attendance list must be a non-empty array",
       });
     }
 
     const results: {
-      success: Array<{ userId: string; attendanceId: string }>;
+      success: Array<{ userId: string; attendanceId: string; action: 'created' | 'updated' }>;
       failed: Array<{ userId: string; error: string }>;
     } = {
       success: [],
@@ -601,7 +627,7 @@ export const markBulkAttendance = async (req: Request, res: Response) => {
     };
 
     // Process each attendance entry
-    for (const entry of attendanceList) {
+    for (const entry of listToProcess) {
       try {
         const { userId, role, date, status, remarks, checkInTime, checkOutTime } = entry;
 
@@ -632,41 +658,67 @@ export const markBulkAttendance = async (req: Request, res: Response) => {
           );
 
         if (existingAttendance) {
-          results.failed.push({
+          // Update existing attendance
+          const updated = await db
+            .update(attendance)
+            .set({
+              status,
+              remarks: remarks || existingAttendance.remarks,
+              checkInTime: checkInTime ? new Date(checkInTime) : existingAttendance.checkInTime,
+              checkOutTime: checkOutTime ? new Date(checkOutTime) : existingAttendance.checkOutTime,
+              markedBy: markedBy || existingAttendance.markedBy,
+              updatedAt: new Date(),
+            })
+            .where(eq(attendance.id, existingAttendance.id))
+            .returning();
+
+          // Check if update was successful
+          if (!updated || updated.length === 0 || !updated[0]) {
+            results.failed.push({
+              userId,
+              error: "Failed to update attendance record",
+            });
+            continue;
+          }
+
+          results.success.push({
             userId,
-            error: "Attendance already exists for this date",
+            attendanceId: updated[0].id,
+            action: 'updated',
           });
-          continue;
-        }
+        } else {
+          // Create new attendance record
+          const newAttendance = await db
+            .insert(attendance)
+            .values({
+              userId,
+              role,
+              date: attendanceDate,
+              status,
+              remarks: remarks || "",
+              checkInTime: checkInTime ? new Date(checkInTime) : null,
+              checkOutTime: checkOutTime ? new Date(checkOutTime) : null,
+              markedBy: markedBy || null,
+            })
+            .returning();
 
-        // Create attendance record
-        const newAttendance = await db
-          .insert(attendance)
-          .values({
-            userId,
-            role,
-            date: attendanceDate,
-            status,
-            remarks: remarks || "",
-            checkInTime: checkInTime ? new Date(checkInTime) : null,
-            checkOutTime: checkOutTime ? new Date(checkOutTime) : null,
-            markedBy: markedBy || null,
-          })
-          .returning();
+          // Check if insertion was successful
+          if (!newAttendance || newAttendance.length === 0 || !newAttendance[0]) {
+            results.failed.push({
+              userId,
+              error: "Failed to create attendance record",
+            });
+            continue;
+          }
 
-        if (!newAttendance[0]) {
-          results.failed.push({
+          results.success.push({
             userId,
-            error: "Failed to create attendance record",
+            attendanceId: newAttendance[0].id,
+            action: 'created',
           });
-          continue;
         }
-
-        results.success.push({
-          userId,
-          attendanceId: newAttendance[0].id,
-        });
       } catch (err) {
+        console.error(`Error processing attendance for user ${entry.userId}:`, err);
         results.failed.push({
           userId: entry.userId || "unknown",
           error: err instanceof Error ? err.message : "Unknown error",
@@ -674,20 +726,31 @@ export const markBulkAttendance = async (req: Request, res: Response) => {
       }
     }
 
+    // Return results
+    const totalProcessed = results.success.length + results.failed.length;
+    const successCount = results.success.length;
+    const failedCount = results.failed.length;
+
     return res.status(200).json({
       success: true,
-      message: `Marked ${results.success.length} attendance records successfully, ${results.failed.length} failed`,
+      message: `Processed ${totalProcessed} records: ${successCount} successful, ${failedCount} failed`,
+      summary: {
+        total: totalProcessed,
+        successful: successCount,
+        failed: failedCount,
+        created: results.success.filter(r => r.action === 'created').length,
+        updated: results.success.filter(r => r.action === 'updated').length,
+      },
       results,
     });
   } catch (err: unknown) {
-    console.error(err);
+    console.error("Bulk attendance marking error:", err);
     return res.status(500).json({
       success: false,
       message: err instanceof Error ? err.message : "Unknown error",
     });
   }
 };
-
 // Delete attendance record
 export const deleteAttendance = async (req: Request, res: Response) => {
   try {
