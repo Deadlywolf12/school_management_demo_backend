@@ -28,6 +28,7 @@ import {
 } from "../controllers/feeController";
 import { applyDiscount, applyFine, payFee } from "../controllers/feeController2";
 import { getDashboardStats, getFeeHistory, getPaymentDetails, getPaymentHistory, getStudentFeeDetails } from "../controllers/feeController3";
+import { getAllFeeStructures } from "../controllers/feeStructureController";
 
 const feeRouter = Router();
 
@@ -53,6 +54,12 @@ feeRouter.post(
   createMonthlyInvoice
 );
 
+
+feeRouter.get(
+  "/fees/structures",
+
+  getAllFeeStructures
+);
 /**
  * @route   POST /api/admin/fees/invoices/annual
  * @desc    Create an annual invoice for a student
