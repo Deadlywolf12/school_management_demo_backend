@@ -1,12 +1,10 @@
+// attendanceValidation.ts - UPDATED to handle markedBy properly
+
 import { z } from "zod";
 
 // Enums for validation
 const RoleEnum = z.enum(["student", "teacher", "staff", "admin", "parent"]);
 const StatusEnum = z.enum(["present", "absent", "late", "leave"]);
-
-// ============================================
-// OPTION 1: Simple String Validation (Recommended for API)
-// ============================================
 
 // Date validation (YYYY-MM-DD)
 const dateString = z
@@ -23,6 +21,14 @@ const dateTimeString = z
   )
   .optional();
 
+// Helper for optional UUID that can be empty string
+const optionalUUID = z
+  .string()
+  .uuid()
+  .optional()
+  .or(z.literal(''))
+  .transform(val => val === '' ? undefined : val);
+
 // Mark attendance schema
 export const markAttendanceSchema = z.object({
   body: z.object({
@@ -33,7 +39,7 @@ export const markAttendanceSchema = z.object({
     remarks: z.string().max(500).optional(),
     checkInTime: dateTimeString,
     checkOutTime: dateTimeString,
-    markedBy: z.string().uuid().optional(),
+    markedBy: optionalUUID, // FIXED: Can be undefined or empty string
   }),
 });
 
@@ -47,14 +53,30 @@ export const updateAttendanceSchema = z.object({
     remarks: z.string().max(500).optional(),
     checkInTime: dateTimeString,
     checkOutTime: dateTimeString,
-    markedBy: z.string().uuid().optional(),
+    markedBy: optionalUUID, // FIXED: Can be undefined or empty string
   }),
 });
 
 // Mark bulk attendance schema
 export const markBulkAttendanceSchema = z.object({
   body: z.object({
-    markedBy: z.string().uuid().optional(),
+    markedBy: optionalUUID, // FIXED: Can be undefined or empty string
+    // Accept BOTH formats for backward compatibility
+    records: z
+      .array(
+        z.object({
+          userId: z.string().uuid("Invalid user ID format"),
+          role: RoleEnum,
+          status: StatusEnum,
+          date: dateString,
+          remarks: z.string().max(500).optional(),
+          checkInTime: dateTimeString,
+          checkOutTime: dateTimeString,
+        })
+      )
+      .min(1, "Attendance list must contain at least one entry")
+      .max(100, "Cannot mark more than 100 attendance records at once")
+      .optional(),
     attendanceList: z
       .array(
         z.object({
@@ -68,7 +90,10 @@ export const markBulkAttendanceSchema = z.object({
         })
       )
       .min(1, "Attendance list must contain at least one entry")
-      .max(100, "Cannot mark more than 100 attendance records at once"),
+      .max(100, "Cannot mark more than 100 attendance records at once")
+      .optional(),
+  }).refine(data => data.records || data.attendanceList, {
+    message: "Either 'records' or 'attendanceList' must be provided"
   }),
 });
 
@@ -148,42 +173,6 @@ export const deleteAttendanceSchema = z.object({
   }),
 });
 
-// ============================================
-// OPTION 2: With Coercion and Transformation
-// (Use this if you want automatic type conversion)
-// ============================================
-
-export const markAttendanceSchemaWithCoercion = z.object({
-  body: z.object({
-    userId: z.string().uuid(),
-    role: RoleEnum,
-    status: StatusEnum,
-    date: z.string().transform((str) => {
-      const date = new Date(str);
-      if (isNaN(date.getTime())) {
-        throw new Error("Invalid date format");
-      }
-      return date.toISOString().split("T")[0]; // Returns YYYY-MM-DD
-    }).optional(),
-    remarks: z.string().max(500).optional(),
-    checkInTime: z.string().transform((str) => {
-      const date = new Date(str);
-      if (isNaN(date.getTime())) {
-        throw new Error("Invalid datetime format");
-      }
-      return date.toISOString();
-    }).optional(),
-    checkOutTime: z.string().transform((str) => {
-      const date = new Date(str);
-      if (isNaN(date.getTime())) {
-        throw new Error("Invalid datetime format");
-      }
-      return date.toISOString();
-    }).optional(),
-    markedBy: z.string().uuid().optional(),
-  }),
-});
-
 // Type exports
 export type MarkAttendanceInput = z.infer<typeof markAttendanceSchema>;
 export type UpdateAttendanceInput = z.infer<typeof updateAttendanceSchema>;
@@ -193,78 +182,3 @@ export type GetUserMonthlyAttendanceInput = z.infer<typeof getUserMonthlyAttenda
 export type GetDailyAttendanceByRoleInput = z.infer<typeof getDailyAttendanceByRoleSchema>;
 export type GetDailySummaryInput = z.infer<typeof getDailySummarySchema>;
 export type DeleteAttendanceInput = z.infer<typeof deleteAttendanceSchema>;
-
-// ============================================
-// Usage Examples
-// ============================================
-
-/*
-// In your routes file:
-
-import { validate } from './middleware/validation';
-import * as schemas from './validators/attendanceValidation';
-
-// Mark attendance
-router.post(
-  '/attendance/mark',
-  validate(schemas.markAttendanceSchema),
-  attendanceController.markAttendance
-);
-
-// Update attendance
-router.put(
-  '/attendance/:id',
-  validate(schemas.updateAttendanceSchema),
-  attendanceController.updateAttendance
-);
-
-// Bulk mark
-router.post(
-  '/attendance/mark-bulk',
-  validate(schemas.markBulkAttendanceSchema),
-  attendanceController.markBulkAttendance
-);
-
-// Get attendance
-router.get(
-  '/attendance',
-  validate(schemas.getAttendanceSchema),
-  attendanceController.getAttendance
-);
-
-// Get user monthly
-router.get(
-  '/attendance/user/:userId/monthly',
-  validate(schemas.getUserMonthlyAttendanceSchema),
-  attendanceController.getUserMonthlyAttendance
-);
-
-// Get daily by role
-router.get(
-  '/attendance/daily/:role',
-  validate(schemas.getDailyAttendanceByRoleSchema),
-  attendanceController.getDailyAttendanceByRole
-);
-
-// Delete
-router.delete(
-  '/attendance/:id',
-  validate(schemas.deleteAttendanceSchema),
-  attendanceController.deleteAttendance
-);
-
-// Example Request Body (POST /attendance/mark):
-{
-  "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "role": "student",
-  "status": "present",
-  "date": "2024-01-15",
-  "remarks": "On time",
-  "checkInTime": "2024-01-15T08:00:00.000Z",
-  "checkOutTime": "2024-01-15T15:00:00.000Z"
-}
-
-// Example Query (GET /attendance?userId=...&role=...):
-GET /attendance?userId=a1b2c3d4-e5f6-7890-abcd-ef1234567890&role=student&month=1&year=2024
-
-*/
