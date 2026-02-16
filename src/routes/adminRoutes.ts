@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { auth } from "../middleware/auth";
 import { adminAuth } from "../middleware/adminAuth";
-import { validate } from "../middleware/validate";
+import { authorize, validate } from "../middleware/validate";
 import { 
   createUserSchema,
   getUsersSchema,
@@ -42,6 +42,7 @@ adminRouter.post(
  */
 adminRouter.get(
   "/users",
+  authorize("teacher"),
   validate(getUsersSchema),
   getAllUsers
 );
