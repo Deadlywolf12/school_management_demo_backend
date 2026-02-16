@@ -9,6 +9,9 @@ import { AuthRequest } from "../middleware/auth";
 import { NewOtp, otps } from "../db/schema/otps";
 
 import { handleOtpRequest } from "../helpers/auth/handleOtps";
+import { students } from "../db/schema/students";
+import { staff } from "../db/schema/staff";
+import { teachers } from "../db/schema/teacher";
 
 type UserRole = "admin" | "teacher" | "student" | "parent" | "staff";
 
@@ -234,14 +237,17 @@ export const signup = async (req: Request<{}, {}, SignupBody>, res: Response) =>
 };
 
 
-
 export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) => {
   try {
     const { email, password } = req.body;
- 
+
     const emailNormalized = email.trim().toLowerCase();
 
-    const [existingUser] = await db.select().from(users).where(eq(users.email, emailNormalized));
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, emailNormalized));
+
     if (!existingUser) {
       return res.status(400).json({ success: false, msg: "User not found" });
     }
@@ -250,16 +256,65 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
     if (!isPasswordValid) {
       return res.status(400).json({ success: false, msg: "Incorrect password" });
     }
-      if (existingUser.status == "deactivated") {
-      return res.status(400).json({ success: false, msg: "Your account is deactivated, please contact admin for more info" });
+
+    if (existingUser.status === "deactivated") {
+      return res.status(400).json({
+        success: false,
+        msg: "Your account is deactivated, please contact admin for more info",
+      });
     }
 
-    const token = jwt.sign({ id: existingUser.id, email: existingUser.email,role: existingUser.role}, getJwtSecret(), {
-      expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-    } as SignOptions);
+    // 🔹 Generate token
+    const token = jwt.sign(
+      {
+        id: existingUser.id,
+        email: existingUser.email,
+        role: existingUser.role,
+      },
+      getJwtSecret(),
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+      } as SignOptions
+    );
+
+    let name: string | null = null;
+
+    // 🔹 Fetch name based on role
+    if (existingUser.role === "student") {
+      const [studentProfile] = await db
+        .select()
+        .from(students)
+        .where(eq(students.userId, existingUser.id));
+
+      name = studentProfile?.name || null;
+    }
+
+    if (existingUser.role === "teacher") {
+      const [teacherProfile] = await db
+        .select()
+        .from(teachers)
+        .where(eq(teachers.userId, existingUser.id));
+
+      name = teacherProfile?.name || null;
+    }
+
+    if (existingUser.role === "staff") {
+      const [staffProfile] = await db
+        .select()
+        .from(staff)
+        .where(eq(staff.userId, existingUser.id));
+
+      name = staffProfile?.name || null;
+    }
 
     const { password: _, ...safeUser } = existingUser;
-    res.json({ success: true, user: safeUser, token });
+
+    res.json({
+      success: true,
+      user: safeUser,
+      name, // 👈 Only name added
+      token,
+    });
   } catch (err) {
     console.error("Signin error:", err);
     res.status(500).json({ success: false, msg: "Internal server error" });
