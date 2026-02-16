@@ -10,6 +10,7 @@ dotenv.config();
 export interface AuthPayload {
   id: string;   // UUID as string
   email: string;
+  role: string; // ← ADD THIS
 }
 
 export interface AuthRequest extends Request {
@@ -23,7 +24,7 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction) 
       throw new Error("JWT_SECRET not set in environment");
     }
 
-    const token = req.header("x-auth-token"); // or switch to Bearer auth
+    const token = req.header("x-auth-token");
     if (!token) {
       return res.status(401).json({ success: false, msg: "No auth provided, access denied" });
     }
@@ -38,13 +39,19 @@ export const auth = async (req: AuthRequest, res: Response, next: NextFunction) 
       return res.status(401).json({ success: false, msg: "Invalid token" });
     }
 
-    // Optional: DB check to see if user still exists
+    // DB check to see if user still exists AND get their role
     const [user] = await db.select().from(users).where(eq(users.id, verified.id));
     if (!user) {
       return res.status(401).json({ success: false, msg: "User not found" });
     }
 
-    req.user = verified;
+    // ← ADD THE ROLE HERE
+    req.user = {
+      id: verified.id,
+      email: verified.email,
+      role: user.role  // Get role from database
+    };
+    
     req.token = token;
     next();
   } catch (err) {
