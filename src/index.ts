@@ -19,7 +19,6 @@ const app = express();
 
 app.use(express.json());
 app.use("/api/v1/auth",authRouter);
-app.use("/api/v1/admin",adminRouter);
 // app.use("/api/v1/admin/teacher",teacherRouter);
 app.use("/api/v1/attendance",attendanceRouter);
 app.use("/api/v1",subjectRouter);
@@ -29,6 +28,7 @@ app.use("/api/v1/classes",classRouter);
 app.use("/api/v1/salary",salaryRouter);
 app.use("/api/v1/exams",examinationRouter);
 app.use("/api/v1/relation",parentStudentRouter);
+app.use("/api/v1/admin",adminRouter);
 
 
 app.get("/",(req,res)=>{
