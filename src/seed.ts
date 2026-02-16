@@ -7,7 +7,7 @@
 //   users → subjects → classes → class_subjects → students → teachers → parents → staff → student_grades → examinations
 //
 // Flow:
-//   1. Create users for all roles
+//   1. Create users for all roles (including admin)
 //   2. Create subjects (to be used in class_subjects)
 //   3. Create classes (basic class records)
 //   4. Update class_subjects with subject mappings
@@ -30,9 +30,13 @@ import { classSubjects, studentGrades } from "./db/schema/grades";
 import { examinations, examSchedules, examResults } from "./db/schema/examination";
 import { eq } from "drizzle-orm";
 import { feeStructures } from "./db/schema/fee";
+import bcrypt from "bcryptjs";
+
 
 // ─── Deterministic UUIDs so the seed is repeatable ──────────────
 const USER_IDS = {
+  // admin
+  admin:     crypto.randomUUID(),
   // students (10)
   student1:  crypto.randomUUID(),
   student2:  crypto.randomUUID(),
@@ -135,35 +139,42 @@ async function seed() {
 
   // ── 1. USERS ────────────────────────────────────────────────────
   console.log("  inserting users…");
+  
+  // Hash the admin password
+  const hashedAdminPassword = await bcrypt.hash("admin123", 8);
+  const hashedDefaultPassword = await bcrypt.hash("hashed_pw", 8);
+  
   await db.insert(users).values([
+    // admin user
+    { id: USER_IDS.admin, email: "admin@admin.com", password: hashedAdminPassword, role: "admin" },
     // student users
-    { id: USER_IDS.student1,  email: "ali.khan@school.com",      password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student2,  email: "sara.ahmed@school.com",   password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student3,  email: "omar.malik@school.com",   password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student4,  email: "zara.iqbal@school.com",   password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student5,  email: "yusuf.naqvi@school.com",  password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student6,  email: "leila.shah@school.com",   password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student7,  email: "hassan.butt@school.com",  password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student8,  email: "nadia.raza@school.com",   password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student9,  email: "imran.ali@school.com",    password: "hashed_pw", role: "student" },
-    { id: USER_IDS.student10, email: "fatima.haq@school.com",   password: "hashed_pw", role: "student" },
+    { id: USER_IDS.student1,  email: "ali.khan@school.com",      password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student2,  email: "sara.ahmed@school.com",   password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student3,  email: "omar.malik@school.com",   password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student4,  email: "zara.iqbal@school.com",   password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student5,  email: "yusuf.naqvi@school.com",  password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student6,  email: "leila.shah@school.com",   password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student7,  email: "hassan.butt@school.com",  password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student8,  email: "nadia.raza@school.com",   password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student9,  email: "imran.ali@school.com",    password: hashedDefaultPassword, role: "student" },
+    { id: USER_IDS.student10, email: "fatima.haq@school.com",   password: hashedDefaultPassword, role: "student" },
     // teacher users
-    { id: USER_IDS.teacher1,  email: "mr.khan@school.com",      password: "hashed_pw", role: "teacher" },
-    { id: USER_IDS.teacher2,  email: "ms.jones@school.com",     password: "hashed_pw", role: "teacher" },
-    { id: USER_IDS.teacher3,  email: "mr.ali@school.com",       password: "hashed_pw", role: "teacher" },
-    { id: USER_IDS.teacher4,  email: "mrs.naz@school.com",      password: "hashed_pw", role: "teacher" },
-    { id: USER_IDS.teacher5,  email: "mr.hasan@school.com",     password: "hashed_pw", role: "teacher" },
+    { id: USER_IDS.teacher1,  email: "mr.khan@school.com",      password: hashedDefaultPassword, role: "teacher" },
+    { id: USER_IDS.teacher2,  email: "ms.jones@school.com",     password: hashedDefaultPassword, role: "teacher" },
+    { id: USER_IDS.teacher3,  email: "mr.ali@school.com",       password: hashedDefaultPassword, role: "teacher" },
+    { id: USER_IDS.teacher4,  email: "mrs.naz@school.com",      password: hashedDefaultPassword, role: "teacher" },
+    { id: USER_IDS.teacher5,  email: "mr.hasan@school.com",     password: hashedDefaultPassword, role: "teacher" },
     // parent users
-    { id: USER_IDS.parent1,   email: "khan.father@gmail.com",   password: "hashed_pw", role: "parent" },
-    { id: USER_IDS.parent2,   email: "ahmed.mother@gmail.com",  password: "hashed_pw", role: "parent" },
-    { id: USER_IDS.parent3,   email: "malik.father@gmail.com",  password: "hashed_pw", role: "parent" },
-    { id: USER_IDS.parent4,   email: "iqbal.mother@gmail.com",  password: "hashed_pw", role: "parent" },
+    { id: USER_IDS.parent1,   email: "khan.father@gmail.com",   password: hashedDefaultPassword, role: "parent" },
+    { id: USER_IDS.parent2,   email: "ahmed.mother@gmail.com",  password: hashedDefaultPassword, role: "parent" },
+    { id: USER_IDS.parent3,   email: "malik.father@gmail.com",  password: hashedDefaultPassword, role: "parent" },
+    { id: USER_IDS.parent4,   email: "iqbal.mother@gmail.com",  password: hashedDefaultPassword, role: "parent" },
     // staff users
-    { id: USER_IDS.staff1,    email: "hr.admin@school.com",     password: "hashed_pw", role: "staff" },
-    { id: USER_IDS.staff2,    email: "finance.head@school.com", password: "hashed_pw", role: "staff" },
-    { id: USER_IDS.staff3,    email: "librarian@school.com",    password: "hashed_pw", role: "staff" },
+    { id: USER_IDS.staff1,    email: "hr.admin@school.com",     password: hashedDefaultPassword, role: "staff" },
+    { id: USER_IDS.staff2,    email: "finance.head@school.com", password: hashedDefaultPassword, role: "staff" },
+    { id: USER_IDS.staff3,    email: "librarian@school.com",    password: hashedDefaultPassword, role: "staff" },
   ]).onConflictDoNothing();
-  console.log("    ✓ users");
+  console.log("    ✓ users (including admin with hashed password)");
 
   // ── 2. SUBJECTS ─────────────────────────────────────────────────
   console.log("  inserting subjects…");
@@ -1096,6 +1107,7 @@ async function seed() {
 
   console.log("\n✅  Seed complete.\n");
   console.log("📊  Summary:");
+  console.log(`    • 1 Admin user created`);
   console.log(`    • 4 Classes created (3A, 4A, 5A, 6A)`);
   console.log(`    • 10 Students distributed across classes`);
   console.log(`    • 5 Teachers (4 assigned as class teachers)`);
@@ -1106,6 +1118,7 @@ async function seed() {
   console.log(`    • Historical grades for 3 students\n`);
   
   console.log("🔍  Quick-test IDs:");
+  console.log(`    Admin             → ${USER_IDS.admin} (admin@admin.com / admin123)`);
   console.log(`    Class 5A          → ${CLASS_IDS.class5A}`);
   console.log(`    Ali Khan          → ${STUDENT_ROW_IDS.student1}  (3 years of grades)`);
   console.log(`    Sara Ahmed        → ${STUDENT_ROW_IDS.student2}  (3 years of grades)`);
