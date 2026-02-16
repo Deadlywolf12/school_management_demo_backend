@@ -264,7 +264,6 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
       });
     }
 
-    // 🔹 Generate token
     const token = jwt.sign(
       {
         id: existingUser.id,
@@ -278,8 +277,8 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
     );
 
     let name: string | null = null;
+    let classId: string | null = null;
 
-    // 🔹 Fetch name based on role
     if (existingUser.role === "student") {
       const [studentProfile] = await db
         .select()
@@ -287,6 +286,7 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
         .where(eq(students.userId, existingUser.id));
 
       name = studentProfile?.name || null;
+      classId = studentProfile?.classId || null;
     }
 
     if (existingUser.role === "teacher") {
@@ -312,7 +312,8 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
     res.json({
       success: true,
       user: safeUser,
-      name, // 👈 Only name added
+      name,
+      classId, // 👈 only filled if student
       token,
     });
   } catch (err) {
