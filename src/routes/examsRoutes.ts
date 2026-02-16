@@ -1,9 +1,7 @@
 // routes/examination.routes.ts
 
 import { Router } from "express";
-import { adminAuth } from "../middleware/adminAuth";
-import { auth } from "../middleware/auth";
-import { authorize, validate } from "../middleware/validate";
+
 
 import {
   createExamination,
@@ -38,12 +36,15 @@ import {
   getClassExamSummarySchema,
   updateStudentMarkSchema,
 } from "../validators/examValidators";
+import { auth } from "../middleware/auth";
+import { authorize, validate } from "../middleware/validate";
+import { adminAuth } from "../middleware/adminAuth";
 
 const examinationRouter = Router();
 
 examinationRouter.get(
   "/",
-  auth,
+
   validate(getExaminationsSchema),
   getExaminations
 );
