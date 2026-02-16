@@ -42,7 +42,7 @@ adminRouter.post(
  */
 adminRouter.get(
   "/users",
-  authorize("teacher"),
+  authorize("teacher","admin"),
   validate(getUsersSchema),
   getAllUsers
 );
