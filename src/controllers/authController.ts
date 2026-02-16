@@ -313,7 +313,7 @@ export const signin = async (req: Request<{}, {}, SigninBody>, res: Response) =>
       success: true,
       user: safeUser,
       name,
-      classId, // 👈 only filled if student
+      classId, 
       token,
     });
   } catch (err) {

@@ -41,11 +41,20 @@ import {
 
 const examinationRouter = Router();
 
+examinationRouter.get(
+  "/",
+  auth,
+  validate(getExaminationsSchema),
+  getExaminations
+);
+
+
 // ─────────────────────────────────────────────
 // [Admin] Create examination
 // ─────────────────────────────────────────────
 examinationRouter.post(
   "/",
+  auth,
   adminAuth,
   validate(createExaminationSchema),
   createExamination
@@ -56,6 +65,7 @@ examinationRouter.post(
 // ─────────────────────────────────────────────
 examinationRouter.post(
   "/:examinationId/schedule",
+   auth,
   adminAuth,
   validate(createExamScheduleSchema),
   createExamSchedule
@@ -66,6 +76,7 @@ examinationRouter.post(
 // ─────────────────────────────────────────────
 examinationRouter.post(
   "/:examinationId/schedule-bulk",
+   auth,
   adminAuth,
   validate(bulkCreateExamScheduleSchema),
   bulkCreateExamSchedules
@@ -85,22 +96,10 @@ examinationRouter.post(
 // ─────────────────────────────────────────────
 // [Auth] Get all examinations (with filters)
 // ─────────────────────────────────────────────
-examinationRouter.get(
-  "/",
-  auth,
-  validate(getExaminationsSchema),
-  getExaminations
-);
 
 // ─────────────────────────────────────────────
 // [Auth] Get exam schedules for an examination
 // ─────────────────────────────────────────────
-examinationRouter.get(
-  "/:examinationId/schedules",
-  auth,
-  validate(getExamSchedulesSchema),
-  getExamSchedules
-);
 
 // ─────────────────────────────────────────────
 // [Auth] Get exam results (with filters)
@@ -110,6 +109,12 @@ examinationRouter.get(
   auth,
   validate(getExamResultsSchema),
   getExamResults
+);
+examinationRouter.get(
+  "/:examinationId/schedules",
+  auth,
+  validate(getExamSchedulesSchema),
+  getExamSchedules
 );
 
 // ─────────────────────────────────────────────
