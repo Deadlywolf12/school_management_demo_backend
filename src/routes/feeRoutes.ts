@@ -36,7 +36,7 @@ const feeRouter = Router();
 // Apply auth middleware to all routes
 // ============================================
 feeRouter.use(auth);
-feeRouter.use(adminAuth); // All fee operations require admin access
+// feeRouter.use(adminAuth); // All fee operations require admin access
 
 // ============================================
 // INVOICE MANAGEMENT ROUTES
