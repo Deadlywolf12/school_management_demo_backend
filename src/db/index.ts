@@ -23,7 +23,8 @@ import { bulkMarkingSessions, examAttendance, examinations, examResults, examSch
 dotenv.config({ path: "../.env" });
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL_DOCKER!,
+  // connectionString: process.env.DATABASE_URL_DOCKER!, // for local
+  connectionString: process.env.DATABASE_URL!,
   ssl: { rejectUnauthorized: false },
 });
 
