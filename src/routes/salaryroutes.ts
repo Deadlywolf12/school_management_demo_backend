@@ -1,9 +1,9 @@
 // routes/salary.routes.ts
 
 import { Router } from "express";
-import { adminAuth } from "../middleware/adminAuth";
+
 import { auth } from "../middleware/auth";
-import { validate } from "../middleware/validate";
+import { authorize, validate } from "../middleware/validate";
 
 import {
   generateMonthlySalary,
@@ -36,13 +36,14 @@ import {
 } from "../validators/salaryValidators";
 
 const salaryRouter = Router();
+salaryRouter.use(auth); // All routes require authentication
 
 // ─────────────────────────────────────────────
 // [Admin] Generate monthly salaries for all employees
 // ─────────────────────────────────────────────
 salaryRouter.post(
   "/generate-monthly",
-  adminAuth,
+authorize("admin"),
   validate(generateMonthlySalarySchema),
   generateMonthlySalary
 );
@@ -52,7 +53,7 @@ salaryRouter.post(
 // ─────────────────────────────────────────────
 salaryRouter.put(
   "/:salaryId/pay",
-  adminAuth,
+authorize("admin"),
   validate(processSalaryPaymentSchema),
   processSalaryPayment
 );
@@ -62,7 +63,7 @@ salaryRouter.put(
 // ─────────────────────────────────────────────
 salaryRouter.post(
   "/bonus",
-  adminAuth,
+authorize("admin"),
   validate(addBonusSchema),
   addBonus
 );
@@ -72,7 +73,7 @@ salaryRouter.post(
 // ─────────────────────────────────────────────
 salaryRouter.post(
   "/deduction",
-  adminAuth,
+ authorize("admin"),
   validate(addDeductionSchema),
   addDeduction
 );
@@ -82,7 +83,7 @@ salaryRouter.post(
 // ─────────────────────────────────────────────
 salaryRouter.post(
   "/adjust",
-  adminAuth,
+authorize("admin"),
   validate(adjustSalarySchema),
   adjustSalary
 );
@@ -102,7 +103,7 @@ salaryRouter.get(
 // ─────────────────────────────────────────────
 salaryRouter.get(
   "/history/:employeeId",
-  auth,
+
   validate(getEmployeeSalaryHistorySchema),
   getEmployeeSalaryHistory
 );
@@ -112,7 +113,7 @@ salaryRouter.get(
 // ─────────────────────────────────────────────
 salaryRouter.get(
   "/summary",
-  adminAuth,
+  
   validate(getSalarySummarySchema),
   getSalarySummary
 );
@@ -122,7 +123,7 @@ salaryRouter.get(
 // ─────────────────────────────────────────────
 salaryRouter.get(
   "/pending",
-  adminAuth,
+
   validate(getPendingPaymentsSchema),
   getPendingPayments
 );
@@ -132,7 +133,7 @@ salaryRouter.get(
 // ─────────────────────────────────────────────
 salaryRouter.put(
   "/:salaryId",
-  adminAuth,
+ authorize("admin"),
   validate(updateSalaryRecordSchema),
   updateSalaryRecord
 );
@@ -142,7 +143,7 @@ salaryRouter.put(
 // ─────────────────────────────────────────────
 salaryRouter.put(
   "/:salaryId/cancel",
-  adminAuth,
+authorize("admin"),
   validate(cancelSalaryPaymentSchema),
   cancelSalaryPayment
 );
@@ -152,7 +153,7 @@ salaryRouter.put(
 // ─────────────────────────────────────────────
 salaryRouter.get(
   "/adjustments/:employeeId",
-  auth,
+
   validate(getSalaryAdjustmentsSchema),
   getSalaryAdjustments
 );

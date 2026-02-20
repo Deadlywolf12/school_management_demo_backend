@@ -18,6 +18,7 @@ import {addGradeSchema, getStudentGradeSchema, getClassSubjectsSchema, updateCla
 import { authorize, validate } from "../middleware/validate";
 
 const gradeRouter = Router();
+gradeRouter.use(auth);
 
 
 
@@ -32,7 +33,7 @@ authorize('teacher','admin'),
 // [Auth]  Get subjects for a class
 gradeRouter.get(
   "/class-subjects/:classNumber",
-  auth,
+
   validate(getClassSubjectsSchema),
   getClassSubjects
 );
@@ -41,7 +42,7 @@ gradeRouter.get(
 gradeRouter.post(
   "/add-grade",
 authorize('teacher','admin'),
-  auth,
+
   validate(addGradeSchema),
   addGrade
 );
@@ -49,7 +50,7 @@ authorize('teacher','admin'),
 // [Auth]  Get a student's grade(s) – optionally filtered by class / year
 gradeRouter.get(
   "/student-grade/:studentId",
-  auth,
+ 
   validate(getStudentGradeSchema),
   getStudentGrade
 );
@@ -57,7 +58,7 @@ gradeRouter.get(
 // [Auth]  Get a student's full academic history + lifetime summary
 gradeRouter.get(
   "/student-overall/:studentId",
-  auth,
+
   validate(getStudentOverallSchema),
   getStudentOverallResult
 );

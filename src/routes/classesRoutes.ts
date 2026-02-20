@@ -1,9 +1,9 @@
 // routes/class.routes.ts
 
 import { Router } from "express";
-import { adminAuth } from "../middleware/adminAuth";
+
 import { auth } from "../middleware/auth";
-import { validate } from "../middleware/validate";
+import { authorize, validate } from "../middleware/validate";
 
 import {
   createClass,
@@ -28,13 +28,15 @@ import {
 } from "../validators/classesValidator";
 
 const classRouter = Router();
+classRouter.use(auth); 
 
 // ─────────────────────────────────────────────
 // [Admin] Create a new class
 // ─────────────────────────────────────────────
 classRouter.post(
   "/",
-  adminAuth,
+
+      authorize("admin"),
   validate(createClassSchema),
   createClass
 );
@@ -44,7 +46,8 @@ classRouter.post(
 // ─────────────────────────────────────────────
 classRouter.put(
   "/:classId",
-  adminAuth,
+
+      authorize("admin"),
   validate(updateClassSchema),
   updateClass
 );
@@ -54,7 +57,7 @@ classRouter.put(
 // ─────────────────────────────────────────────
 classRouter.get(
   "/",
-  auth,
+
   validate(getAllClassesSchema),
   getAllClasses
 );
@@ -64,7 +67,7 @@ classRouter.get(
 // ─────────────────────────────────────────────
 classRouter.get(
   "/:classId",
-  auth,
+
   validate(getClassByIdSchema),
   getClassById
 );
@@ -74,7 +77,7 @@ classRouter.get(
 // ─────────────────────────────────────────────
 classRouter.get(
   "/:classId/details",
-  auth,
+
   validate(getClassDetailsSchema),
   getClassDetails
 );
@@ -84,7 +87,8 @@ classRouter.get(
 // ─────────────────────────────────────────────
 classRouter.post(
   "/:classId/students",
-  adminAuth,
+  authorize("teacher","admin"),
+
   validate(addStudentsToClassSchema),
   addStudentsToClass
 );
@@ -94,7 +98,8 @@ classRouter.post(
 // ─────────────────────────────────────────────
 classRouter.delete(
   "/:classId/students",
-  adminAuth,
+  authorize("teacher","admin"),
+
   validate(removeStudentsFromClassSchema),
   removeStudentsFromClass
 );
@@ -104,7 +109,8 @@ classRouter.delete(
 // ─────────────────────────────────────────────
 classRouter.delete(
   "/:classId",
-  adminAuth,
+
+      authorize("admin"),
   validate(deleteClassSchema),
   deleteClass
 );

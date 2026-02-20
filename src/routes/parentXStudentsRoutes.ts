@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { auth } from "../middleware/auth";
-import { adminAuth } from "../middleware/adminAuth";
-import { validate } from "../middleware/validate";
+
+import { authorize, validate } from "../middleware/validate";
 import {
   getStudentParentsSchema,
   getParentStudentsSchema,
@@ -19,7 +19,7 @@ const parentStudentRouter = Router();
 
 // Apply auth and admin middleware to all routes
 parentStudentRouter.use(auth);
-parentStudentRouter.use(adminAuth);
+
 
 /**
  * @route   GET /api/admin/students/:studentId/parents
@@ -53,6 +53,7 @@ parentStudentRouter.get(
  */
 parentStudentRouter.post(
   "/link-parent-student",
+  authorize("admin"),
   validate(linkParentStudentSchema),
   linkParentStudent
 );
@@ -65,6 +66,8 @@ parentStudentRouter.post(
  */
 parentStudentRouter.delete(
   "/unlink-parent-student",
+ 
+authorize("admin"),
   validate(unlinkParentStudentSchema),
   unlinkParentStudent
 );

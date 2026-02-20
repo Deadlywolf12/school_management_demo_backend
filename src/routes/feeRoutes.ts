@@ -1,6 +1,6 @@
 import { Router } from "express";
 
-import { validate } from "../middleware/validate";
+import { authorize, validate } from "../middleware/validate";
 import {
   createMonthlyInvoiceSchema,
   createAnnualInvoiceSchema,
@@ -28,13 +28,15 @@ import {
 import { applyDiscount, applyFine, payFee } from "../controllers/feeController2";
 import { getDashboardStats, getFeeHistory, getPaymentDetails, getPaymentHistory, getStudentFeeDetails } from "../controllers/feeController3";
 import { getAllFeeStructures } from "../controllers/feeStructureController";
+import { auth } from "../middleware/auth";
 
 const feeRouter = Router();
 
 // ============================================
 // Apply auth middleware to all routes
 // ============================================
-// feeRouter.use(auth);
+feeRouter.use(auth);
+
 // feeRouter.use(adminAuth); // All fee operations require admin access
 
 // ============================================
@@ -49,6 +51,7 @@ const feeRouter = Router();
  */
 feeRouter.post(
   "/fees/invoices/monthly",
+  authorize("admin"), // Only admins can create invoices
   validate(createMonthlyInvoiceSchema),
   createMonthlyInvoice
 );
@@ -56,6 +59,7 @@ feeRouter.post(
 
 feeRouter.get(
   "/fees/structures",
+    authorize("admin"), 
 
   getAllFeeStructures
 );
@@ -67,6 +71,7 @@ feeRouter.get(
  */
 feeRouter.post(
   "/fees/invoices/annual",
+    authorize("admin"), 
   validate(createAnnualInvoiceSchema),
   createAnnualInvoice
 );
@@ -93,6 +98,7 @@ feeRouter.get(
  */
 feeRouter.put(
   "/fees/invoices/:invoiceId/cancel",
+    authorize("admin"), 
   validate(cancelInvoiceSchema),
   cancelInvoice
 );
@@ -109,6 +115,7 @@ feeRouter.put(
  */
 feeRouter.post(
   "/fees/discounts",
+    authorize("admin"), 
   validate(applyDiscountSchema),
   applyDiscount
 );
@@ -119,7 +126,7 @@ feeRouter.post(
  * @access  Admin only
  * @body    { invoiceId, fineType, amount, reason, notes? }
  */
-feeRouter.post("/fees/fines", validate(applyFineSchema), applyFine);
+feeRouter.post("/fees/fines", validate(applyFineSchema),  authorize("admin"),  applyFine);
 
 // ============================================
 // PAYMENT ROUTES
@@ -132,7 +139,7 @@ feeRouter.post("/fees/fines", validate(applyFineSchema), applyFine);
  * @body    { invoiceId, amount, paymentMethod, referenceNumber?, notes? }
  * @note    FULL PAYMENT ONLY - amount must equal invoice total
  */
-feeRouter.post("/fees/payments", validate(payFeeSchema), payFee);
+feeRouter.post("/fees/payments", validate(payFeeSchema),  authorize("admin","staff"),  payFee);
 
 /**
  * @route   GET /api/admin/fees/payments/history

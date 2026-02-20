@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { auth } from "../middleware/auth";
-import { adminAuth } from "../middleware/adminAuth";
-import { validate } from "../middleware/validate";
+
+import { authorize, validate } from "../middleware/validate";
 import {
   createSubjectSchema,
   updateSubjectSchema,
@@ -31,7 +31,7 @@ const subjectRouter = Router();
 // Apply auth and admin middleware to all routes
 // ============================================
 subjectRouter.use(auth);
-subjectRouter.use(adminAuth);
+
 
 // ============================================
 // SUBJECT CRUD ROUTES
@@ -57,6 +57,7 @@ subjectRouter.get(
  */
 subjectRouter.post(
   "/subjects",
+  authorize("admin"),
   validate(createSubjectSchema),
   createSubject
 );
@@ -82,6 +83,7 @@ subjectRouter.get(
  */
 subjectRouter.put(
   "/subjects/:subjectId",
+  authorize("admin"),
   validate(updateSubjectSchema),
   updateSubject
 );
@@ -94,6 +96,7 @@ subjectRouter.put(
  */
 subjectRouter.delete(
   "/subjects/:subjectId",
+  authorize("admin"),
   validate(deleteSubjectSchema),
   deleteSubject
 );
@@ -111,6 +114,7 @@ subjectRouter.delete(
  */
 subjectRouter.post(
   "/subjects/assign-teacher",
+  authorize("admin"),
   validate(assignTeacherToSubjectSchema),
   assignTeacherToSubject
 );
@@ -123,6 +127,7 @@ subjectRouter.post(
  */
 subjectRouter.delete(
     "/subjects/remove-teacher/:teacherId/:subjectId",
+    authorize("admin"),
   validate(removeTeacherFromSubjectSchema),
   removeTeacherFromSubject
 );

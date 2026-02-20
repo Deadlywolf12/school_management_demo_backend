@@ -148,6 +148,13 @@
       "when": 1770236382464,
       "tag": "0020_curious_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1771627124490,
+      "tag": "0021_even_spiral",
+      "breakpoints": true
     }
   ]
 }

@@ -24,6 +24,7 @@ dotenv.config({ path: "../.env" });
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL_DOCKER!,
+  ssl: { rejectUnauthorized: false },
 });
 
 // Spread all tables in the schema

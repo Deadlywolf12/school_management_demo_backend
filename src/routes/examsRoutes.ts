@@ -38,9 +38,11 @@ import {
 } from "../validators/examValidators";
 import { auth } from "../middleware/auth";
 import { authorize, validate } from "../middleware/validate";
-import { adminAuth } from "../middleware/adminAuth";
+
 
 const examinationRouter = Router();
+
+examinationRouter.use(auth); 
 
 examinationRouter.get(
   "/",
@@ -55,8 +57,9 @@ examinationRouter.get(
 // ─────────────────────────────────────────────
 examinationRouter.post(
   "/",
-  auth,
-  adminAuth,
+
+
+      authorize("admin"),
   validate(createExaminationSchema),
   createExamination
 );
@@ -66,8 +69,9 @@ examinationRouter.post(
 // ─────────────────────────────────────────────
 examinationRouter.post(
   "/:examinationId/schedule",
-   auth,
-  adminAuth,
+
+ 
+      authorize("admin"),
   validate(createExamScheduleSchema),
   createExamSchedule
 );
@@ -77,8 +81,9 @@ examinationRouter.post(
 // ─────────────────────────────────────────────
 examinationRouter.post(
   "/:examinationId/schedule-bulk",
-   auth,
-  adminAuth,
+
+  
+      authorize("admin"),
   validate(bulkCreateExamScheduleSchema),
   bulkCreateExamSchedules
 );
@@ -107,13 +112,13 @@ examinationRouter.post(
 // ─────────────────────────────────────────────
 examinationRouter.get(
   "/results",
-  auth,
+
   validate(getExamResultsSchema),
   getExamResults
 );
 examinationRouter.get(
   "/:examinationId/schedules",
-  auth,
+
   validate(getExamSchedulesSchema),
   getExamSchedules
 );
@@ -123,7 +128,7 @@ examinationRouter.get(
 // ─────────────────────────────────────────────
 examinationRouter.get(
   "/report/:studentId",
-  auth,
+
   validate(getStudentExamReportSchema),
   getStudentExamReport
 );
@@ -133,7 +138,7 @@ examinationRouter.get(
 // ─────────────────────────────────────────────
 examinationRouter.get(
   "/class-summary/:classId",
-  auth,
+
   validate(getClassExamSummarySchema),
   getClassExamSummary
 );
@@ -143,7 +148,8 @@ examinationRouter.get(
 // ─────────────────────────────────────────────
 examinationRouter.put(
   "/:examinationId",
-  adminAuth,
+  
+      authorize("admin"),
   validate(updateExaminationSchema),
   updateExamination
 );
@@ -153,7 +159,8 @@ examinationRouter.put(
 // ─────────────────────────────────────────────
 examinationRouter.put(
   "/schedule/:scheduleId",
-  adminAuth,
+
+      authorize("admin"),
   validate(updateExamScheduleSchema),
   updateExamSchedule
 );
@@ -163,7 +170,8 @@ examinationRouter.put(
 // ─────────────────────────────────────────────
 examinationRouter.put(
   "/result/:resultId",
-  auth, // Add middleware to check if teacher is authorized
+
+  authorize("teacher","admin"),
   validate(updateStudentMarkSchema),
   updateStudentMark
 );
@@ -173,7 +181,7 @@ examinationRouter.put(
 // ─────────────────────────────────────────────
 examinationRouter.delete(
   "/:examinationId",
-  adminAuth,
+  authorize("admin"),
   validate(deleteExaminationSchema),
   deleteExamination
 );
@@ -183,7 +191,7 @@ examinationRouter.delete(
 // ─────────────────────────────────────────────
 examinationRouter.delete(
   "/schedule/:scheduleId",
-  adminAuth,
+  authorize("admin"),
   validate(deleteExamScheduleSchema),
   deleteExamSchedule
 );

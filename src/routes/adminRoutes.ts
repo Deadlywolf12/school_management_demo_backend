@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { auth } from "../middleware/auth";
-import { adminAuth } from "../middleware/adminAuth";
+
 import { authorize, validate } from "../middleware/validate";
 import { 
   createUserSchema,
@@ -20,7 +20,6 @@ const adminRouter = Router();
 
 // Apply auth to all admin routes
 adminRouter.use(auth);
-adminRouter.use(adminAuth);
 
 /**
  * @route   POST /api/admin/createUsers
@@ -31,6 +30,7 @@ adminRouter.use(adminAuth);
 adminRouter.post(
   "/createUsers",
   validate(createUserSchema),
+  authorize("admin"),
   createUser
 );
 
@@ -50,6 +50,8 @@ adminRouter.get(
 adminRouter.get(
   "/users/namesOnly",
   validate(getUsersSchema),
+    authorize("teacher","admin"),
+     
   getAllUsersByNameOnly
 );
 
